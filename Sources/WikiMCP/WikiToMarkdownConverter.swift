@@ -21,7 +21,7 @@ struct WikiConversionResult {
 // MARK: - Wiki to Markdown Converter
 
 /// 将 Confluence Wiki HTML 转换为 Markdown 格式
-final class WikiToMarkdownConverter {
+final class WikiToMarkdownConverter: @unchecked Sendable {
     
     private let baseURL: String
     private let cacheDirectory: URL

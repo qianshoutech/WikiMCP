@@ -75,7 +75,7 @@ struct WikiContainer: Codable {
 
 // MARK: - Wiki API Client
 
-final class WikiAPIClient {
+final class WikiAPIClient: @unchecked Sendable {
     
     static let shared = WikiAPIClient()
     
