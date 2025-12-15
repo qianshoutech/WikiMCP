@@ -8,20 +8,41 @@
 import Foundation
 import SwiftSoup
 
+// MARK: - Conversion Result
+
+/// 转换结果，包含 Markdown 内容和保存路径
+struct WikiConversionResult {
+    let markdown: String
+    let outputDirectory: URL
+    let markdownFile: URL
+    let downloadedImages: [String: URL]  // 原始 URL -> 本地路径
+}
+
 // MARK: - Wiki to Markdown Converter
 
 /// 将 Confluence Wiki HTML 转换为 Markdown 格式
 final class WikiToMarkdownConverter {
     
     private let baseURL: String
+    private let cacheDirectory: URL
+    
+    /// 当前转换任务的上下文
+    private var currentPageId: String?
+    private var currentPageTitle: String?
+    private var currentOutputDir: URL?
+    private var imagesToDownload: [(url: String, localName: String)] = []
     
     init(baseURL: String = "https://wiki.p1.cn") {
         self.baseURL = baseURL
+        
+        // 使用 Application Support 下的 WikiMCP 作为缓存目录
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        self.cacheDirectory = appSupport.appendingPathComponent("WikiMCP", isDirectory: true)
     }
     
     // MARK: - Public API
     
-    /// 从 Wiki 页面 URL 转换为 Markdown
+    /// 从 Wiki 页面 URL 转换为 Markdown（仅返回字符串，不保存文件）
     /// - Parameter url: Wiki 页面 URL
     /// - Returns: Markdown 字符串
     func convert(url: String) async throws -> String {
@@ -29,12 +50,121 @@ final class WikiToMarkdownConverter {
         return try convertHTML(html)
     }
     
-    /// 从 Wiki 页面 ID 转换为 Markdown
+    /// 从 Wiki 页面 ID 转换为 Markdown（仅返回字符串，不保存文件）
     /// - Parameter pageId: Wiki 页面 ID
     /// - Returns: Markdown 字符串
     func convert(pageId: String) async throws -> String {
         let html = try await WikiAPIClient.shared.viewPage(pageId: pageId)
         return try convertHTML(html)
+    }
+    
+    /// 从 Wiki 页面 URL 转换并保存为本地文件（下载图片）
+    /// - Parameter url: Wiki 页面 URL
+    /// - Returns: WikiConversionResult 包含保存信息
+    func convertAndSave(url: String) async throws -> WikiConversionResult {
+        let html = try await WikiAPIClient.shared.viewPage(url: url)
+        return try await convertAndSaveHTML(html)
+    }
+    
+    /// 从 Wiki 页面 ID 转换并保存为本地文件（下载图片）
+    /// - Parameter pageId: Wiki 页面 ID
+    /// - Returns: WikiConversionResult 包含保存信息
+    func convertAndSave(pageId: String) async throws -> WikiConversionResult {
+        let html = try await WikiAPIClient.shared.viewPage(pageId: pageId)
+        return try await convertAndSaveHTML(html)
+    }
+    
+    /// 转换 HTML 并保存到本地
+    private func convertAndSaveHTML(_ html: String) async throws -> WikiConversionResult {
+        // 重置状态
+        imagesToDownload = []
+        
+        let document = try SwiftSoup.parse(html)
+        
+        // 提取页面信息
+        let pageTitle = try document.select("meta[name=ajs-page-title]").first()?.attr("content") ?? "Untitled"
+        let pageId = try document.select("meta[name=ajs-page-id]").first()?.attr("content") ?? "unknown"
+        
+        currentPageId = pageId
+        currentPageTitle = pageTitle
+        
+        // 创建输出目录
+        let safeFolderName = makeSafeFileName("\(pageTitle)-\(pageId)")
+        let outputDir = cacheDirectory.appendingPathComponent(safeFolderName, isDirectory: true)
+        currentOutputDir = outputDir
+        
+        try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+        
+        // 转换为 Markdown（使用本地图片模式）
+        let markdown = try convertHTMLWithLocalImages(document)
+        
+        // 下载所有图片
+        var downloadedImages: [String: URL] = [:]
+        for (imageURL, localName) in imagesToDownload {
+            do {
+                let imageData = try await WikiAPIClient.shared.downloadImage(from: imageURL)
+                let localPath = outputDir.appendingPathComponent(localName)
+                try imageData.write(to: localPath)
+                downloadedImages[imageURL] = localPath
+                print("✓ 下载图片: \(localName)")
+            } catch {
+                print("✗ 下载图片失败: \(imageURL) - \(error.localizedDescription)")
+            }
+        }
+        
+        // 保存 Markdown 文件
+        let markdownFile = outputDir.appendingPathComponent("\(safeFolderName).md")
+        try markdown.write(to: markdownFile, atomically: true, encoding: .utf8)
+        
+        // 重置状态
+        currentPageId = nil
+        currentPageTitle = nil
+        currentOutputDir = nil
+        imagesToDownload = []
+        
+        return WikiConversionResult(
+            markdown: markdown,
+            outputDirectory: outputDir,
+            markdownFile: markdownFile,
+            downloadedImages: downloadedImages
+        )
+    }
+    
+    /// 生成安全的文件名
+    private func makeSafeFileName(_ name: String) -> String {
+        let invalidChars = CharacterSet(charactersIn: "/\\:*?\"<>|")
+        return name.components(separatedBy: invalidChars).joined(separator: "_")
+    }
+    
+    /// 转换 HTML 并使用本地图片路径
+    private func convertHTMLWithLocalImages(_ document: Document) throws -> String {
+        var markdownParts: [String] = []
+        
+        // 提取页面标题
+        if let pageTitle = try document.select("meta[name=ajs-page-title]").first()?.attr("content"),
+           !pageTitle.isEmpty {
+            markdownParts.append("# \(pageTitle)")
+            markdownParts.append("")
+        }
+        
+        // 提取主要内容
+        if let mainContent = try document.select("#main-content.wiki-content").first() {
+            let contentMarkdown = try convertElement(mainContent)
+            markdownParts.append(contentMarkdown)
+        }
+        
+        // 提取评论部分
+        let commentsMarkdown = try extractComments(document)
+        if !commentsMarkdown.isEmpty {
+            markdownParts.append("")
+            markdownParts.append("---")
+            markdownParts.append("")
+            markdownParts.append("## 评论")
+            markdownParts.append("")
+            markdownParts.append(commentsMarkdown)
+        }
+        
+        return markdownParts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     /// 将 HTML 字符串转换为 Markdown
@@ -399,16 +529,57 @@ final class WikiToMarkdownConverter {
         }
         
         // 如果是相对路径，拼接 baseURL
+        var fullURL = src
         if !src.isEmpty && !src.hasPrefix("http") {
-            src = baseURL + src
+            fullURL = baseURL + src
         }
         
         let alt = try element.attr("alt")
         let title = try element.attr("data-linked-resource-default-alias")
-        
         let altText = alt.isEmpty ? (title.isEmpty ? "image" : title) : alt
         
-        return "![\(altText)](\(src))"
+        // 如果是保存模式，转换为本地路径
+        if let pageId = currentPageId, currentOutputDir != nil {
+            let localName = generateLocalImageName(from: fullURL, pageId: pageId)
+            imagesToDownload.append((url: fullURL, localName: localName))
+            return "![\(altText)](\(localName))"
+        }
+        
+        return "![\(altText)](\(fullURL))"
+    }
+    
+    /// 从 URL 生成本地图片文件名
+    /// 例如：https://wiki.p1.cn/download/attachments/87451209/image2025-12-15_15-35-42.png?version=1&...
+    /// 生成：87451209_image2025-12-15_15-35-42.png
+    private func generateLocalImageName(from urlString: String, pageId: String) -> String {
+        guard let url = URL(string: urlString) else {
+            return "\(pageId)_image.png"
+        }
+        
+        // 获取路径最后一部分作为文件名
+        let pathComponents = url.path.split(separator: "/")
+        
+        // 查找 attachments 后面的 pageId 和文件名
+        if let attachmentsIndex = pathComponents.firstIndex(where: { $0 == "attachments" }),
+           attachmentsIndex + 2 < pathComponents.count {
+            let attachmentPageId = String(pathComponents[attachmentsIndex + 1])
+            let fileName = String(pathComponents[attachmentsIndex + 2])
+            
+            // URL 解码文件名
+            let decodedFileName = fileName.removingPercentEncoding ?? fileName
+            return "\(attachmentPageId)_\(decodedFileName)"
+        }
+        
+        // 备用方案：使用 URL 的最后一部分
+        let lastComponent = url.lastPathComponent
+        let decodedName = lastComponent.removingPercentEncoding ?? lastComponent
+        
+        // 确保有扩展名
+        if decodedName.contains(".") {
+            return "\(pageId)_\(decodedName)"
+        } else {
+            return "\(pageId)_\(decodedName).png"
+        }
     }
     
     // MARK: - Link Conversion
