@@ -791,6 +791,10 @@ final class WikiToMarkdownConverter {
                     let itemTexts = try items.map { li -> String in
                         try convertInlineContent(li).trimmingCharacters(in: .whitespacesAndNewlines)
                     }
+                    // 如果之前有内容，先加换行
+                    if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        result += "\n"
+                    }
                     result += itemTexts.map { "• \($0)" }.joined(separator: "\n")
                     
                 case "ol":
@@ -803,6 +807,10 @@ final class WikiToMarkdownConverter {
                         itemTexts.append("\(index). \(text)")
                         index += 1
                     }
+                    // 如果之前有内容，先加换行
+                    if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        result += "\n"
+                    }
                     result += itemTexts.joined(separator: "\n")
                     
                 case "div":
@@ -814,7 +822,15 @@ final class WikiToMarkdownConverter {
                     
                 case "p":
                     let content = try convertInlineContent(childElement)
+                    // 如果之前有内容，先加换行（多个段落之间需要换行）
+                    if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        result += "\n"
+                    }
                     result += content
+                    
+                case "br":
+                    // 处理 <br> 标签，添加换行
+                    result += "\n"
                     
                 default:
                     result += try convertSingleElement(childElement)
