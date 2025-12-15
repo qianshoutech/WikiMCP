@@ -88,7 +88,7 @@ final class WikiToMarkdownConverter {
         currentPageId = pageId
         currentPageTitle = pageTitle
         
-        // 创建输出目录
+        // 创建输出目录（文件夹名包含 pageId 以区分同名文档）
         let safeFolderName = makeSafeFileName("\(pageTitle)-\(pageId)")
         let outputDir = cacheDirectory.appendingPathComponent(safeFolderName, isDirectory: true)
         currentOutputDir = outputDir
@@ -112,8 +112,9 @@ final class WikiToMarkdownConverter {
             }
         }
         
-        // 保存 Markdown 文件
-        let markdownFile = outputDir.appendingPathComponent("\(safeFolderName).md")
+        // 保存 Markdown 文件（文件名只用标题，不含 pageId）
+        let safeFileName = makeSafeFileName(pageTitle)
+        let markdownFile = outputDir.appendingPathComponent("\(safeFileName).md")
         try markdown.write(to: markdownFile, atomically: true, encoding: .utf8)
         
         // 重置状态
