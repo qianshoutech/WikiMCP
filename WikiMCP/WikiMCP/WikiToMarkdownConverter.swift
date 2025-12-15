@@ -566,14 +566,16 @@ final class WikiToMarkdownConverter {
             let attachmentPageId = String(pathComponents[attachmentsIndex + 1])
             let fileName = String(pathComponents[attachmentsIndex + 2])
             
-            // URL 解码文件名
-            let decodedFileName = fileName.removingPercentEncoding ?? fileName
+            // URL 解码文件名，并将空格替换为下划线（Markdown 兼容）
+            let decodedFileName = (fileName.removingPercentEncoding ?? fileName)
+                .replacingOccurrences(of: " ", with: "_")
             return "\(attachmentPageId)_\(decodedFileName)"
         }
         
         // 备用方案：使用 URL 的最后一部分
         let lastComponent = url.lastPathComponent
-        let decodedName = lastComponent.removingPercentEncoding ?? lastComponent
+        let decodedName = (lastComponent.removingPercentEncoding ?? lastComponent)
+            .replacingOccurrences(of: " ", with: "_")
         
         // 确保有扩展名
         if decodedName.contains(".") {
