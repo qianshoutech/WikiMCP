@@ -17,7 +17,7 @@ struct WikiParser: ParsableCommand {
     )
     
     @Argument(help: "Wiki 页面 URL 或页面 ID")
-    var input: String = "https://wiki.p1.cn/pages/viewpage.action?pageId=87425088"
+    var input: String = "https://wiki.p1.cn/pages/viewpage.action?pageId=87451209"
     
     
     func run() throws {
