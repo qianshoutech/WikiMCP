@@ -14,22 +14,36 @@ struct WikiParser: ParsableCommand {
     @Argument(help: "Wiki 页面 URL 或页面 ID")
     var input: String = "https://wiki.p1.cn/pages/viewpage.action?pageId=87451209"
     
+    @Flag(name: .shortAndLong, help: "输出原始 HTML")
+    var html: Bool = false
+    
     func run() throws {
         Task {
             do {
                 let converter = WikiToMarkdownConverter()
-                let markdown: String
                 
                 // 判断输入是 URL 还是页面 ID
-                if input.hasPrefix("http") {
-                    markdown = try await converter.convert(url: input)
+                if html {
+                    // 输出原始 HTML
+                    let htmlContent: String
+                    if input.hasPrefix("http") {
+                        htmlContent = try await WikiAPIClient.shared.viewPage(url: input)
+                    } else {
+                        htmlContent = try await WikiAPIClient.shared.viewPage(pageId: input)
+                    }
+                    print(htmlContent)
                 } else {
-                    markdown = try await converter.convert(pageId: input)
+                    let markdown: String
+                    if input.hasPrefix("http") {
+                        markdown = try await converter.convert(url: input)
+                    } else {
+                        markdown = try await converter.convert(pageId: input)
+                    }
+                    
+                    print("========== Markdown 输出 ==========")
+                    print(markdown)
+                    print("===================================")
                 }
-                
-                print("========== Markdown 输出 ==========")
-                print(markdown)
-                print("===================================")
                 
             } catch {
                 print("转换失败: \(error)")

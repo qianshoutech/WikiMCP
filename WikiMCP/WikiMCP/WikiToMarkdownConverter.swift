@@ -196,10 +196,10 @@ final class WikiToMarkdownConverter {
             let content = try convertInlineContent(element)
             return "*\(content)*"
             
-        // 下划线 (Markdown 不支持，使用斜体替代)
+        // 下划线 (Markdown 不支持，使用 HTML 标签)
         case "u":
             let content = try convertInlineContent(element)
-            return "*\(content)*"
+            return "<u>\(content)</u>"
             
         // 删除线
         case "s", "del", "strike":
@@ -243,7 +243,7 @@ final class WikiToMarkdownConverter {
     
     // MARK: - Inline Content Conversion
     
-    private func convertInlineContent(_ element: Element) throws -> String {
+    private func convertInlineContent(_ element: Element, inheritedStyles: Set<String> = []) throws -> String {
         var result = ""
         
         for child in element.getChildNodes() {
@@ -254,18 +254,15 @@ final class WikiToMarkdownConverter {
                 
                 switch tagName {
                 case "strong", "b":
-                    let content = try convertInlineContent(childElement)
-                    result += "**\(content)**"
+                    result += try convertFormattedContent(childElement, style: "bold", inheritedStyles: inheritedStyles)
                 case "em", "i":
-                    let content = try convertInlineContent(childElement)
-                    result += "*\(content)*"
+                    result += try convertFormattedContent(childElement, style: "italic", inheritedStyles: inheritedStyles)
                 case "u":
-                    // 下划线用斜体替代
-                    let content = try convertInlineContent(childElement)
-                    result += "*\(content)*"
+                    // 下划线用 HTML 标签
+                    let content = try convertInlineContent(childElement, inheritedStyles: inheritedStyles)
+                    result += "<u>\(content)</u>"
                 case "s", "del", "strike":
-                    let content = try convertInlineContent(childElement)
-                    result += "~~\(content)~~"
+                    result += try convertFormattedContent(childElement, style: "strike", inheritedStyles: inheritedStyles)
                 case "code":
                     let code = try childElement.text()
                     result += "`\(code)`"
@@ -274,7 +271,7 @@ final class WikiToMarkdownConverter {
                 case "img":
                     result += try convertImage(childElement)
                 case "span":
-                    result += try convertSpan(childElement)
+                    result += try convertSpan(childElement, inheritedStyles: inheritedStyles)
                 case "br":
                     result += "\n"
                 case "time":
@@ -282,7 +279,7 @@ final class WikiToMarkdownConverter {
                     let text = try childElement.text()
                     result += text.isEmpty ? datetime : text
                 default:
-                    result += try convertInlineContent(childElement)
+                    result += try convertInlineContent(childElement, inheritedStyles: inheritedStyles)
                 }
             }
         }
@@ -290,15 +287,103 @@ final class WikiToMarkdownConverter {
         return result
     }
     
+    /// 处理格式化内容，支持嵌套格式
+    private func convertFormattedContent(_ element: Element, style: String, inheritedStyles: Set<String>) throws -> String {
+        var result = ""
+        var newStyles = inheritedStyles
+        newStyles.insert(style)
+        
+        // 检查是否有嵌套格式元素
+        let hasNestedFormatting = element.children().contains { child in
+            let tag = child.tagName().lowercased()
+            return ["strong", "b", "em", "i", "s", "del", "strike"].contains(tag)
+        }
+        
+        if hasNestedFormatting {
+            // 有嵌套格式，逐个处理子节点
+            for child in element.getChildNodes() {
+                if let textNode = child as? TextNode {
+                    let text = textNode.getWholeText()
+                    if !text.isEmpty {
+                        // 纯文本部分，应用当前样式
+                        result += applyMarkdownStyle(text, styles: newStyles)
+                    }
+                } else if let childElement = child as? Element {
+                    let tagName = childElement.tagName().lowercased()
+                    
+                    switch tagName {
+                    case "strong", "b":
+                        result += try convertFormattedContent(childElement, style: "bold", inheritedStyles: newStyles)
+                    case "em", "i":
+                        result += try convertFormattedContent(childElement, style: "italic", inheritedStyles: newStyles)
+                    case "s", "del", "strike":
+                        result += try convertFormattedContent(childElement, style: "strike", inheritedStyles: newStyles)
+                    case "u":
+                        let content = try convertInlineContent(childElement, inheritedStyles: newStyles)
+                        result += "<u>\(content)</u>"
+                    default:
+                        let content = try convertInlineContent(childElement, inheritedStyles: newStyles)
+                        result += applyMarkdownStyle(content, styles: newStyles)
+                    }
+                }
+            }
+        } else {
+            // 没有嵌套格式，直接处理
+            let content = try convertInlineContent(element, inheritedStyles: newStyles)
+            result = applyMarkdownStyle(content, styles: newStyles)
+        }
+        
+        return result
+    }
+    
+    /// 应用 Markdown 样式
+    private func applyMarkdownStyle(_ text: String, styles: Set<String>) -> String {
+        guard !text.isEmpty else { return "" }
+        
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return text }
+        
+        let leadingSpaces = String(text.prefix(while: { $0.isWhitespace }))
+        let trailingSpaces = String(text.reversed().prefix(while: { $0.isWhitespace }).reversed())
+        
+        var prefix = ""
+        var suffix = ""
+        
+        // 删除线
+        if styles.contains("strike") {
+            prefix += "~~"
+            suffix = "~~" + suffix
+        }
+        
+        // 加粗和斜体组合
+        let hasBold = styles.contains("bold")
+        let hasItalic = styles.contains("italic")
+        
+        if hasBold && hasItalic {
+            prefix += "***"
+            suffix = "***" + suffix
+        } else if hasBold {
+            prefix += "**"
+            suffix = "**" + suffix
+        } else if hasItalic {
+            prefix += "*"
+            suffix = "*" + suffix
+        }
+        
+        return "\(leadingSpaces)\(prefix)\(trimmed)\(suffix)\(trailingSpaces)"
+    }
+    
     // MARK: - Span Conversion (处理颜色等)
     
-    private func convertSpan(_ element: Element) throws -> String {
+    private func convertSpan(_ element: Element, inheritedStyles: Set<String> = []) throws -> String {
         let style = try element.attr("style")
-        let content = try convertInlineContent(element)
+        let content = try convertInlineContent(element, inheritedStyles: inheritedStyles)
         
         // 如果有颜色样式，使用斜体表示
         if style.contains("color:") {
-            return "*\(content)*"
+            var newStyles = inheritedStyles
+            newStyles.insert("italic")
+            return applyMarkdownStyle(content, styles: newStyles)
         }
         
         return content
@@ -614,7 +699,8 @@ final class WikiToMarkdownConverter {
     
     private func extractCommentsFromThread(_ thread: Element, level: Int) throws -> [String] {
         var comments: [String] = []
-        let indent = String(repeating: "  ", count: level)
+        // 使用多层引用 > 来表示嵌套
+        let quotePrefix = String(repeating: "> ", count: level + 1)
         
         // 获取当前评论（直接子元素）
         for child in thread.children() {
@@ -630,10 +716,10 @@ final class WikiToMarkdownConverter {
                 let time = try child.select(".comment-date a").first()?.text() ?? ""
                 
                 if !commentText.isEmpty {
-                    comments.append("\(indent)> **\(author)** (\(time)):")
+                    comments.append("\(quotePrefix)**\(author)** (\(time)):")
                     let contentLines = commentText.split(separator: "\n", omittingEmptySubsequences: false)
                     for line in contentLines {
-                        comments.append("\(indent)> \(line)")
+                        comments.append("\(quotePrefix)\(line)")
                     }
                     comments.append("")
                 }
