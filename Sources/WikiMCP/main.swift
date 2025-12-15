@@ -45,13 +45,13 @@ struct WikiMCPServer {
             return .init(tools: [
                 Tool(
                     name: "wiki_to_md",
-                    description: "将 Confluence Wiki 页面转换为 Markdown 格式。支持通过 URL 或 pageId 获取页面内容。",
+                    description: "【当用户消息包含 wiki.p1.cn 链接时必须调用此工具】将公司内部 Confluence Wiki 页面转换为 Markdown 格式。用于读取、查看、获取 wiki.p1.cn 的页面内容。",
                     inputSchema: .object([
                         "type": .string("object"),
                         "properties": .object([
                             "url": .object([
                                 "type": .string("string"),
-                                "description": .string("Wiki 页面的完整 URL，例如: https://wiki.p1.cn/pages/viewpage.action?pageId=12345")
+                                "description": .string("Wiki 页面的完整 URL，包含 wiki.p1.cn 的链接，例如: https://wiki.p1.cn/pages/viewpage.action?pageId=12345")
                             ]),
                             "pageId": .object([
                                 "type": .string("string"),
@@ -62,7 +62,7 @@ struct WikiMCPServer {
                 ),
                 Tool(
                     name: "search_wiki",
-                    description: "搜索 Confluence Wiki 内容，返回匹配的页面列表。",
+                    description: "【当用户想搜索公司 Wiki 或查找内部文档时调用此工具】搜索 wiki.p1.cn 上的 Confluence Wiki 内容，返回匹配的页面列表。",
                     inputSchema: .object([
                         "type": .string("object"),
                         "properties": .object([
