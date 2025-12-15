@@ -701,14 +701,28 @@ final class WikiToMarkdownConverter {
     // MARK: - Table Conversion
     
     private func convertTable(_ element: Element) throws -> String {
+        // 检测是否包含嵌套表格
+        let hasNestedTable = try !element.select("td table, th table, td .table-wrap, th .table-wrap").isEmpty()
+        
+        if hasNestedTable {
+            // 包含嵌套表格，使用 HTML 格式输出
+            return try convertTableToHTML(element)
+        }
+        
+        // 不包含嵌套表格，使用 Markdown 格式
+        return try convertTableToMarkdown(element)
+    }
+    
+    /// 将表格转换为 Markdown 格式
+    private func convertTableToMarkdown(_ element: Element) throws -> String {
         var rows: [[String]] = []
         var headerRow: [String] = []
         var isHeader = false
         
-        // 获取所有行
-        let allRows = try element.select("tr")
+        // 只获取直接的行（不包括嵌套表格中的行）
+        let directRows = try getDirectTableRows(element)
         
-        for (rowIndex, tr) in allRows.enumerated() {
+        for (rowIndex, tr) in directRows.enumerated() {
             var cells: [String] = []
             
             for cell in tr.children() {
@@ -769,6 +783,116 @@ final class WikiToMarkdownConverter {
         
         result += "\n"
         return result
+    }
+    
+    /// 获取表格的直接行（不包括嵌套表格中的行）
+    private func getDirectTableRows(_ element: Element) throws -> [Element] {
+        var directRows: [Element] = []
+        
+        // 先找到 tbody 或直接使用 table
+        let tbody = try element.select("> tbody").first() ?? element
+        let thead = try element.select("> thead").first()
+        
+        // 先处理 thead 中的行
+        if let thead = thead {
+            for child in thead.children() where child.tagName().lowercased() == "tr" {
+                directRows.append(child)
+            }
+        }
+        
+        // 再处理 tbody 或 table 直接子元素中的行
+        for child in tbody.children() where child.tagName().lowercased() == "tr" {
+            directRows.append(child)
+        }
+        
+        return directRows
+    }
+    
+    /// 将表格转换为 HTML 格式（用于包含嵌套表格的情况）
+    private func convertTableToHTML(_ element: Element) throws -> String {
+        var result = "\n<table>\n"
+        
+        let directRows = try getDirectTableRows(element)
+        
+        for tr in directRows {
+            result += "\n<tr>\n"
+            
+            for cell in tr.children() {
+                let tagName = cell.tagName().lowercased()
+                if tagName == "th" || tagName == "td" {
+                    let cellContent = try convertTableCellToHTML(cell)
+                    result += "\n<\(tagName)>\n\n\(cellContent)\n\n</\(tagName)>\n"
+                }
+            }
+            
+            result += "\n</tr>\n"
+        }
+        
+        result += "\n</table>\n\n"
+        return result
+    }
+    
+    /// 将表格单元格转换为 HTML 格式中的内容（递归处理嵌套表格）
+    private func convertTableCellToHTML(_ element: Element) throws -> String {
+        var result = ""
+        
+        for child in element.getChildNodes() {
+            if let textNode = child as? TextNode {
+                let text = textNode.getWholeText()
+                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    result += text
+                }
+            } else if let childElement = child as? Element {
+                let tagName = childElement.tagName().lowercased()
+                
+                switch tagName {
+                case "table":
+                    // 嵌套表格：递归调用
+                    result += try convertTableToHTML(childElement)
+                    
+                case "div":
+                    if childElement.hasClass("table-wrap") {
+                        // 表格包装器
+                        if let nestedTable = try childElement.select("table").first() {
+                            result += try convertTableToHTML(nestedTable)
+                        } else {
+                            result += try convertTableCellToHTML(childElement)
+                        }
+                    } else if childElement.hasClass("content-wrapper") {
+                        result += try convertTableCellToHTML(childElement)
+                    } else if childElement.hasClass("code") && childElement.hasClass("panel") {
+                        // 代码块
+                        result += try convertCodeBlock(childElement)
+                    } else {
+                        result += try convertSingleElement(childElement)
+                    }
+                    
+                case "pre":
+                    // 代码块
+                    result += try convertPreBlock(childElement)
+                    
+                case "ul":
+                    result += try convertUnorderedList(childElement)
+                    
+                case "ol":
+                    result += try convertOrderedList(childElement)
+                    
+                case "p":
+                    let content = try convertInlineContent(childElement)
+                    if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        result += content + "\n\n"
+                    }
+                    
+                case "br":
+                    result += "\n"
+                    
+                default:
+                    result += try convertSingleElement(childElement)
+                }
+            }
+        }
+        
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     /// 处理表格单元格内容，保持列表格式
