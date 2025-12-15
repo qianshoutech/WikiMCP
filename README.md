@@ -1,0 +1,2 @@
+# WikiMCP
+QianShou wiki mcp
