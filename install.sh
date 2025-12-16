@@ -16,30 +16,30 @@ NC='\033[0m' # No Color
 REPO="qianshoutech/WikiMCP"
 BINARY_NAME="wikimcp"
 
-echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║       Installing WikiMCP Server          ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
-echo ""
+printf "${BLUE}╔══════════════════════════════════════════╗${NC}\n"
+printf "${BLUE}║       正在安装 WikiMCP Server            ║${NC}\n"
+printf "${BLUE}╚══════════════════════════════════════════╝${NC}\n"
+printf "\n"
 
 # 检测系统
 OS=$(uname -s)
 
 if [ "$OS" != "Darwin" ]; then
-  echo -e "${RED}Error: WikiMCP only supports macOS.${NC}"
+  printf "${RED}错误: WikiMCP 仅支持 macOS 系统。${NC}\n"
   exit 1
 fi
 
-echo -e "${BLUE}Detected: macOS${NC}"
+printf "${BLUE}检测到系统: macOS${NC}\n"
 
 # Create ~/.local/bin directory (if it doesn't exist)
 if [ ! -d "$HOME/.local/bin" ]; then
-  echo -e "${YELLOW}Creating ~/.local/bin directory...${NC}"
+  printf "${YELLOW}正在创建 ~/.local/bin 目录...${NC}\n"
   mkdir -p "$HOME/.local/bin"
 fi
 
 # Add to PATH based on the current shell (if not already added)
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-  echo -e "${YELLOW}Adding ~/.local/bin to your PATH...${NC}"
+  printf "${YELLOW}正在将 ~/.local/bin 添加到 PATH 环境变量...${NC}\n"
   
   # Detect the user's actual login shell
   USER_SHELL=$(basename "$SHELL")
@@ -47,19 +47,19 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   # Determine shell configuration file
   if [ -f "$HOME/.zshrc" ] && [[ "$USER_SHELL" == "zsh" ]]; then
     SHELL_CONFIG="$HOME/.zshrc"
-    echo -e "${BLUE}Detected ZSH as your login shell${NC}"
+    printf "${BLUE}检测到登录 Shell: ZSH${NC}\n"
   elif [ -f "$HOME/.bashrc" ] && [[ "$USER_SHELL" == "bash" ]]; then
     SHELL_CONFIG="$HOME/.bashrc"
-    echo -e "${BLUE}Detected Bash as your login shell${NC}"
+    printf "${BLUE}检测到登录 Shell: Bash${NC}\n"
   elif [ -f "$HOME/.zshrc" ]; then
     SHELL_CONFIG="$HOME/.zshrc"
-    echo -e "${BLUE}Found .zshrc configuration file${NC}"
+    printf "${BLUE}找到 .zshrc 配置文件${NC}\n"
   elif [ -f "$HOME/.bashrc" ]; then
     SHELL_CONFIG="$HOME/.bashrc"
-    echo -e "${BLUE}Found .bashrc configuration file${NC}"
+    printf "${BLUE}找到 .bashrc 配置文件${NC}\n"
   else
     SHELL_CONFIG="$HOME/.profile"
-    echo -e "${YELLOW}Using ~/.profile as fallback${NC}"
+    printf "${YELLOW}使用 ~/.profile 作为备选配置文件${NC}\n"
   fi
   
   if [ -f "$SHELL_CONFIG" ] || [ "$SHELL_CONFIG" = "$HOME/.profile" ]; then
@@ -69,25 +69,25 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     # Check if already added
     if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_CONFIG" 2>/dev/null; then
       echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
-      echo -e "${GREEN}Added PATH to $SHELL_CONFIG${NC}"
+      printf "${GREEN}已将 PATH 添加到 $SHELL_CONFIG${NC}\n"
     fi
-    echo -e "${YELLOW}Note: You may need to restart your terminal or run 'source $SHELL_CONFIG' for PATH changes to take effect${NC}"
+    printf "${YELLOW}提示: 你可能需要重启终端或运行 'source $SHELL_CONFIG' 使 PATH 变更生效${NC}\n"
   else
-    echo -e "${RED}Warning: Could not find shell configuration file. Please add ~/.local/bin to your PATH manually.${NC}"
+    printf "${RED}警告: 找不到 shell 配置文件，请手动将 ~/.local/bin 添加到 PATH。${NC}\n"
   fi
 fi
 
 # Download and install the latest version
-echo ""
-echo -e "${BLUE}Downloading the latest version...${NC}"
+printf "\n"
+printf "${BLUE}正在下载最新版本...${NC}\n"
 
 # 构建下载 URL
 DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${BINARY_NAME}.tar.gz"
 
 if ! curl -fSL "$DOWNLOAD_URL" | tar xz -C "$HOME/.local/bin"; then
-  echo -e "${RED}Error: Failed to download or extract the binary.${NC}"
-  echo -e "${RED}URL: $DOWNLOAD_URL${NC}"
-  echo -e "${YELLOW}Please check if the release exists at: https://github.com/${REPO}/releases${NC}"
+  printf "${RED}错误: 下载或解压二进制文件失败。${NC}\n"
+  printf "${RED}URL: $DOWNLOAD_URL${NC}\n"
+  printf "${YELLOW}请检查 Release 是否存在: https://github.com/${REPO}/releases${NC}\n"
   exit 1
 fi
 
@@ -100,36 +100,36 @@ fi
 
 # Verify installation
 if [ -x "$HOME/.local/bin/$BINARY_NAME" ]; then
-  echo ""
-  echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║    ✅ Installation completed!            ║${NC}"
-  echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
-  echo ""
+  printf "\n"
+  printf "${GREEN}╔══════════════════════════════════════════╗${NC}\n"
+  printf "${GREEN}║         ✅ 安装完成！                    ║${NC}\n"
+  printf "${GREEN}╚══════════════════════════════════════════╝${NC}\n"
+  printf "\n"
   
   # Check if executable is in PATH
   if command -v "$BINARY_NAME" >/dev/null 2>&1; then
-    echo -e "${GREEN}$BINARY_NAME is in your PATH and ready to use.${NC}"
+    printf "${GREEN}$BINARY_NAME 已在 PATH 中，可以直接使用。${NC}\n"
   else
-    echo -e "${YELLOW}Note: $BINARY_NAME is installed but may not be in your current PATH.${NC}"
-    echo -e "${YELLOW}Run the following command to use it immediately:${NC}"
-    echo -e "${BLUE}  $HOME/.local/bin/$BINARY_NAME${NC}"
-    echo -e "${YELLOW}Or restart your terminal session for PATH changes to take effect.${NC}"
+    printf "${YELLOW}提示: $BINARY_NAME 已安装，但可能不在当前 PATH 中。${NC}\n"
+    printf "${YELLOW}你可以运行以下命令立即使用:${NC}\n"
+    printf "${BLUE}  ~/.local/bin/$BINARY_NAME${NC}\n"
+    printf "${YELLOW}或者重启终端使 PATH 变更生效。${NC}\n"
   fi
   
-  echo ""
-  echo -e "${BLUE}═══════════════════════════════════════════${NC}"
-  echo -e "${BLUE}  Configuration Instructions${NC}"
-  echo -e "${BLUE}═══════════════════════════════════════════${NC}"
-  echo ""
-  echo -e "Add the following to your MCP client configuration:"
-  echo ""
-  echo -e "${GREEN}For Cursor IDE (~/.cursor/mcp.json):${NC}"
-  echo ""
+  printf "\n"
+  printf "${BLUE}═══════════════════════════════════════════${NC}\n"
+  printf "${BLUE}  配置说明${NC}\n"
+  printf "${BLUE}═══════════════════════════════════════════${NC}\n"
+  printf "\n"
+  printf "将以下内容添加到你的 MCP 客户端配置中:\n"
+  printf "\n"
+  printf "${GREEN}以 Cursor IDE 为例 (~/.cursor/mcp.json):${NC}\n"
+  printf "\n"
   cat << 'EOF'
 {
   "mcpServers": {
     "wikimcp": {
-      "command": "$HOME/.local/bin/wikimcp",
+      "command": "~/.local/bin/wikimcp",
       "env": {
         "WIKI_COOKIE": "your_cookie_string_here"
       }
@@ -137,18 +137,17 @@ if [ -x "$HOME/.local/bin/$BINARY_NAME" ]; then
   }
 }
 EOF
-  echo ""
-  echo -e "${YELLOW}Note: Replace \$HOME with your actual home directory path${NC}"
-  echo -e "${YELLOW}      e.g., /Users/yourusername/.local/bin/wikimcp${NC}"
-  echo ""
-  echo -e "To get your Wiki cookie:"
-  echo -e "  1. Open https://wiki.p1.cn in browser and login"
-  echo -e "  2. Open DevTools (F12) → Network tab"
-  echo -e "  3. Refresh page, click any request"
-  echo -e "  4. Copy the Cookie header value"
-  echo ""
+  printf "\n"
+  printf "${YELLOW}提示: 其他支持 MCP 的客户端配置方式类似${NC}\n"
+  printf "\n"
+  printf "获取 Wiki Cookie 的方法:\n"
+  printf "  1. 在浏览器中打开 https://wiki.p1.cn 并登录\n"
+  printf "  2. 打开开发者工具 (F12) → 网络 (Network) 标签\n"
+  printf "  3. 刷新页面，点击任意请求\n"
+  printf "  4. 复制请求头中的 Cookie 值\n"
+  printf "  5. 详细步骤请参考 README 文档 \n"
+  printf "\n"
 else
-  echo -e "${RED}Error: Installation failed. The binary is not executable.${NC}"
+  printf "${RED}错误: 安装失败，二进制文件不可执行。${NC}\n"
   exit 1
 fi
-
