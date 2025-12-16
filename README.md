@@ -24,33 +24,19 @@ WikiMCP 提供以下 MCP 工具：
 
 ## 安装
 
-### 从源码构建
+### 一键安装
 
-1. 确保已安装 Swift 6.0+ (Xcode 16+)
+运行以下命令自动下载并安装最新版本：
 
-2. 克隆仓库：
 ```bash
-git clone <repository-url>
-cd WikiMCP
+curl -fsSL https://raw.githubusercontent.com/qianshoutech/WikiMCP/main/install.sh | bash
 ```
 
-3. 构建项目：
-```bash
-# Debug 构建
-swift build
+安装脚本会自动：
+- 下载预编译的二进制文件
+- 安装到 `~/.local/bin` 目录
+- 配置 PATH 环境变量
 
-# Release 构建
-swift build -c release
-```
-
-4. 构建后的可执行文件位于：
-```bash
-# Debug
-.build/debug/wikimcp
-
-# Release
-.build/release/wikimcp
-```
 
 ## Cookie 配置
 
