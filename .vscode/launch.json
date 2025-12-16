@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WikiMCP}",
+            "name": "Debug wikimcp",
+            "target": "wikimcp",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug wikimcp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WikiMCP}",
+            "name": "Release wikimcp",
+            "target": "wikimcp",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release wikimcp"
+        }
+    ]
+}

@@ -40,30 +40,15 @@ struct WikiContent: Codable {
     let type: String?
     let status: String?
     let title: String?
-    let space: WikiSpace?
+    let _expandable: WikiExpandable?
     
     enum CodingKeys: String, CodingKey {
-        case id, type, status, title, space
+        case id, type, status, title, _expandable
     }
 }
 
-struct WikiSpace: Codable {
-    let id: Int?
-    let key: String?
-    let name: String?
-    let type: String?
-    let icon: WikiIcon?
-    
-    enum CodingKeys: String, CodingKey {
-        case id, key, name, type, icon
-    }
-}
-
-struct WikiIcon: Codable {
-    let path: String?
-    let width: Int?
-    let height: Int?
-    let isDefault: Bool?
+struct WikiExpandable: Codable {
+    let space: String?
 }
 
 struct WikiContainer: Codable {

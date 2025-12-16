@@ -118,15 +118,15 @@ struct WikiMCPServer {
     /// 处理 wiki_to_md 工具调用
     static func handleWikiToMd(arguments: [String: Value], converter: WikiToMarkdownConverter) async -> CallTool.Result {
         do {
-            let markdown: String
+            let result: WikiConversionResult
             
             // 优先使用 URL
             if let urlValue = arguments["url"], case .string(let url) = urlValue, !url.isEmpty {
-                markdown = try await converter.convert(url: url)
+                result = try await converter.convertAndSave(url: url)
             }
             // 其次使用 pageId
             else if let pageIdValue = arguments["pageId"], case .string(let pageId) = pageIdValue, !pageId.isEmpty {
-                markdown = try await converter.convert(pageId: pageId)
+                result = try await converter.convertAndSave(pageId: pageId)
             }
             else {
                 return .init(
@@ -135,8 +135,18 @@ struct WikiMCPServer {
                 )
             }
             
+            // 构建返回信息
+            var responseText = "## 转换完成\n\n"
+            responseText += "**Markdown 文件**: `\(result.markdownFile.path)`\n\n"
+            responseText += "**输出目录**: `\(result.outputDirectory.path)`\n\n"
+            if !result.downloadedImages.isEmpty {
+                responseText += "**下载图片数量**: \(result.downloadedImages.count)\n\n"
+            }
+            responseText += "---\n\n"
+            responseText += result.markdown
+            
             return .init(
-                content: [.text(markdown)],
+                content: [.text(responseText)],
                 isError: false
             )
             
@@ -181,14 +191,14 @@ struct WikiMCPServer {
             
             for (index, result) in response.results.enumerated() {
                 let title = result.title ?? result.content?.title ?? "无标题"
-                let pageId = result.content?.id ?? "未知"
-                let spaceName = result.content?.space?.name ?? "未知空间"
                 let excerpt = result.excerpt?.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression) ?? ""
                 let lastModified = result.friendlyLastModified ?? result.lastModified ?? ""
+                let author = result.resultGlobalContainer?.title ?? result.content?._expandable?.space ?? ""
                 
                 resultText += "### \(index + 1). \(title)\n"
-                resultText += "- **页面 ID**: \(pageId)\n"
-                resultText += "- **空间**: \(spaceName)\n"
+                if !author.isEmpty {
+                    resultText += "- **作者**: \(author)\n"
+                }
                 if !lastModified.isEmpty {
                     resultText += "- **最后修改**: \(lastModified)\n"
                 }
