@@ -7,6 +7,7 @@
 
 import Foundation
 import Alamofire
+import Logging
 
 // MARK: - Search Response Models
 
@@ -66,13 +67,33 @@ final class WikiAPIClient: @unchecked Sendable {
     
     private let baseURL = "https://wiki.p1.cn"
     
+    /// Cookie 管理器
+    private let cookieManager = CookieManager.shared
+    
+    /// 日志记录器
+    private let logger = Logger(label: "com.wikimcp.api")
+    
+    /// 获取请求头（包含动态获取的 Cookie）
     private var defaultHeaders: HTTPHeaders {
-        [
-            "Cookie": "seraph.confluence=78479924%3A9a9e8667733c07df5acb7d56b81df8f3d3a1ab4b; _webtracing_device_id=t_13501817-932f6e30-8296ccabc848aa53; actoken=5b3d1323a2c3bbcdcef7afed1431148f3057; _webtracing_session_id=s_13502457-abdb1571-014cf1da90f9f741; mywork.tab.tasks=false; qs_sso_auth_at=01WsSwzOnxoBQNOhyqj8Kpa+I9OQxcwUQjbffQ9Do6fVMtQpiXB43NUmYZfWXwEIoQo2x+4u1FF3QR7jlvE4r7pfd+JeglJck3kZ1q8XOv2DUb4WY8reWKY/+0QHMjJ3nASbNNG+YFZsdjlLlw1ykxECD6k0sWoxEYzS8NEvheNVx6xFTkCattEJAD/jPiHz0qBuULZXHnwVvLRKpqbRZtW5aPFahOA2ToCGl0ZRVS3wWfeQI=; JSESSIONID=9BC4CAD80339533E35363E5BC203587A"
-        ]
+        var headers: HTTPHeaders = [:]
+        
+        if let cookie = cookieManager.getCookie() {
+            headers["Cookie"] = cookie
+        } else {
+            logger.warning("无法获取 Cookie，API 请求可能会失败")
+        }
+        
+        return headers
     }
     
-    private init() {}
+    private init() {
+        // 初始化时检查 Cookie 状态
+        if let cookie = cookieManager.getCookie(), !cookie.isEmpty {
+            logger.info("已从环境变量 WIKI_COOKIE 加载 Cookie")
+        } else {
+            logger.warning("未配置 Cookie，请设置环境变量 WIKI_COOKIE")
+        }
+    }
     
     // MARK: - Search API
     

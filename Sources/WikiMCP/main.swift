@@ -12,9 +12,11 @@ import Logging
 // MARK: - MCP Server Setup
 
 /// Wiki MCP 服务器
-/// 提供两个工具:
+/// 提供以下工具:
 /// 1. wiki_to_md - 将 Wiki 页面转换为 Markdown
 /// 2. search_wiki - 搜索 Wiki 内容
+///
+/// Cookie 配置: 通过环境变量 WIKI_COOKIE 设置
 
 struct WikiMCPServer {
     static func main() async throws {
@@ -24,6 +26,9 @@ struct WikiMCPServer {
             handler.logLevel = .warning
             return handler
         }
+        
+        // 预初始化 CookieManager（从环境变量加载 Cookie）
+        _ = CookieManager.shared
         
         let logger = Logger(label: "com.wikimcp.server")
         
@@ -223,6 +228,7 @@ struct WikiMCPServer {
             )
         }
     }
+    
 }
 
 // MARK: - Entry Point

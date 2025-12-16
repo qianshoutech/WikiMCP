@@ -4,7 +4,7 @@
 
 ## 功能
 
-WikiMCP 提供两个 MCP 工具：
+WikiMCP 提供以下 MCP 工具：
 
 ### 1. `wiki_to_md`
 将 Confluence Wiki 页面转换为 Markdown 格式。
@@ -52,17 +52,35 @@ swift build -c release
 .build/release/wikimcp
 ```
 
+## Cookie 配置
+
+WikiMCP 需要有效的 Cookie 才能访问 Wiki。通过环境变量 `WIKI_COOKIE` 配置（见下方 MCP 配置示例）。
+
+### 如何获取 Cookie
+
+1. 在浏览器中打开 https://wiki.p1.cn 并登录
+2. 打开开发者工具 (F12 或 Cmd+Option+I, 或右键-检查)
+3. 切换到 Network 标签
+4. 刷新页面，点击页面请求
+5. 在 Headers 中找到 `Cookie` 字段并复制完整内容配置到 mcp env 中
+6. Cookie 如果过期请重新获取并配置
+
+![示例](get_cookie.jpg)
+
 ## 配置 MCP 客户端
 
 ### Cursor IDE
 
-在 Cursor 的 MCP 配置文件中添加（macOS: `~/.cursor/mcp.json`）：
+**带环境变量配置 Cookie：**
 
 ```json
 {
   "mcpServers": {
     "wikimcp": {
-      "command": "/path/to/WikiMCP/.build/release/wikimcp"
+      "command": "/path/to/WikiMCP/.build/release/wikimcp",
+      "env": {
+        "WIKI_COOKIE": "your_cookie_string_here"
+      }
     }
   }
 }
@@ -78,7 +96,10 @@ swift build -c release
 {
   "mcpServers": {
     "wikimcp": {
-      "command": "/path/to/WikiMCP/.build/release/wikimcp"
+      "command": "/path/to/WikiMCP/.build/release/wikimcp",
+      "env": {
+        "WIKI_COOKIE": "your_cookie_string_here"
+      }
     }
   }
 }
@@ -90,19 +111,14 @@ swift build -c release
 
 ### 搜索 Wiki
 ```
-请搜索关于 "API 文档" 的 Wiki 页面
+在wiki中搜索 Swift
 ```
 
 ### 转换页面为 Markdown
 ```
-请将 https://wiki.p1.cn/pages/viewpage.action?pageId=12345 转换为 Markdown
+获取 https://wiki.p1.cn/pages/viewpage.action?pageId=12345
 ```
 
-或
-
-```
-请将页面 ID 为 12345 的 Wiki 页面转换为 Markdown
-```
 
 ## 项目结构
 
@@ -112,23 +128,17 @@ WikiMCP/
 ├── Sources/
 │   └── WikiMCP/
 │       ├── main.swift                    # MCP 服务器入口
+│       ├── CookieManager.swift           # Cookie 管理器
 │       ├── WikiRequest.swift             # Wiki API 客户端
 │       └── WikiToMarkdownConverter.swift # HTML -> Markdown 转换器
 └── README.md
 ```
 
-## 技术栈
-
-- **Swift 6.0+** - 主要编程语言
-- **[MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk)** - Model Context Protocol 官方 Swift SDK
-- **[SwiftSoup](https://github.com/scinfu/SwiftSoup)** - HTML 解析库
-- **[Alamofire](https://github.com/Alamofire/Alamofire)** - 网络请求库
 
 ## 注意事项
 
 1. 需要有效的 Wiki 访问权限（Cookie 认证）
-2. 当前 Cookie 配置在 `WikiRequest.swift` 中，生产环境需要修改为动态配置
-3. 服务器通过 stdio 与 MCP 客户端通信
+2. 推荐使用环境变量 `WIKI_COOKIE` 配置 Cookie
 
 ## License
 
