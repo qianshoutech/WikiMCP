@@ -55,7 +55,7 @@ WikiMCP 需要有效的 Cookie 才能访问 Wiki。通过环境变量 `WIKI_COOK
 
 ## 配置 MCP 客户端
 
-### Cursor IDE
+### Cursor 或 Claude Code 等 MCP 客户端
 
 **带环境变量配置 Cookie：**
 
@@ -63,26 +63,7 @@ WikiMCP 需要有效的 Cookie 才能访问 Wiki。通过环境变量 `WIKI_COOK
 {
   "mcpServers": {
     "wikimcp": {
-      "command": "/path/to/WikiMCP/.build/release/wikimcp",
-      "env": {
-        "WIKI_COOKIE": "your_cookie_string_here"
-      }
-    }
-  }
-}
-```
-
-将路径替换为实际的可执行文件路径。
-
-### Claude Desktop
-
-在 Claude Desktop 的配置文件中添加（macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`）：
-
-```json
-{
-  "mcpServers": {
-    "wikimcp": {
-      "command": "/path/to/WikiMCP/.build/release/wikimcp",
+      "command": "~/.local/bin/wikimcp",
       "env": {
         "WIKI_COOKIE": "your_cookie_string_here"
       }
