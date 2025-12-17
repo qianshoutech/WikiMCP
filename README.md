@@ -20,6 +20,13 @@
 获取 https://wiki.p1.cn/pages/viewpage.action?pageId=12345
 ```
 
+### 或者其他更复杂的需求
+```
+我们的 iOS 项目从 Cocoapods 转向了 SPM, 我想知道有没有相关记录的文档, 帮我在 wiki 中寻找
+
+从 wiki 中寻找见面相关的信息, 帮我总结当前见面需求的情况
+```
+
 ---
 
 ## 下载安装
@@ -89,6 +96,10 @@ source skills/wiki-tool/env && skills/wiki-tool/wikicli search "关键词"
 # 转换页面
 source skills/wiki-tool/env && skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..."
 ```
+
+#### 在 Cursor / Antigravity 中使用 Skill
+
+如果你想在 **Cursor**、**Antigravity**、**GitHub Copilot** 等支持 AI 代理中更好地使用 Skill，可以借助 [SkillPort](https://github.com/gotalab/skillport) 
 
 ---
 
