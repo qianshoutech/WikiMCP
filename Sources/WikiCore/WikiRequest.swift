@@ -56,6 +56,21 @@ public struct WikiContainer: Codable, Sendable {
     public let displayUrl: String?
 }
 
+// MARK: - Disable SSL Certificate Validation (for internal wiki server)
+
+/// 禁用 SSL 证书验证的 ServerTrustManager
+/// 用于内网 Wiki 服务器（可能使用自签名证书）
+final class DisabledServerTrustManager: ServerTrustManager, @unchecked Sendable {
+    init() {
+        super.init(evaluators: [:])
+    }
+    
+    override func serverTrustEvaluator(forHost host: String) throws -> (any ServerTrustEvaluating)? {
+        // 对所有主机禁用证书验证
+        return DisabledTrustEvaluator()
+    }
+}
+
 // MARK: - Wiki API Client
 
 public final class WikiAPIClient: @unchecked Sendable {
@@ -66,6 +81,9 @@ public final class WikiAPIClient: @unchecked Sendable {
     
     /// Cookie 管理器
     private let cookieManager = CookieManager.shared
+    
+    /// 自定义 Session（禁用 SSL 证书验证）
+    private let session: Session
     
     /// 日志记录器
     private var logger: WikiLoggerProtocol {
@@ -86,6 +104,17 @@ public final class WikiAPIClient: @unchecked Sendable {
     }
     
     private init() {
+        // 创建禁用缓存的 URLSessionConfiguration
+        let configuration = URLSessionConfiguration.af.default
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        
+        // 创建禁用 SSL 验证 + 禁用缓存的 Session（用于内网服务器）
+        session = Session(
+            configuration: configuration,
+            serverTrustManager: DisabledServerTrustManager()
+        )
+        
         // 初始化时检查 Cookie 状态
         if cookieManager.getCookie() == nil || cookieManager.getCookie()?.isEmpty == true {
             logger.warning("未配置 Cookie，请设置环境变量 WIKI_COOKIE")
@@ -118,7 +147,7 @@ public final class WikiAPIClient: @unchecked Sendable {
         ]
         
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(url, method: .get, parameters: parameters, headers: defaultHeaders)
+            session.request(url, method: .get, parameters: parameters, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)
                 .responseDecodable(of: WikiSearchResponse.self) { response in
                     switch response.result {
@@ -144,7 +173,7 @@ public final class WikiAPIClient: @unchecked Sendable {
         ]
         
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(url, method: .get, parameters: parameters, headers: defaultHeaders)
+            session.request(url, method: .get, parameters: parameters, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)
                 .responseString { response in
                     switch response.result {
@@ -163,7 +192,7 @@ public final class WikiAPIClient: @unchecked Sendable {
     public func viewPage(url: String) async throws -> String {
         
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(url, method: .get, parameters: nil, headers: defaultHeaders)
+            session.request(url, method: .get, parameters: nil, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)
                 .responseString { response in
                     switch response.result {
@@ -181,7 +210,7 @@ public final class WikiAPIClient: @unchecked Sendable {
     /// - Returns: 图片 Data
     public func downloadImage(from url: String) async throws -> Data {
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(url, method: .get, headers: defaultHeaders)
+            session.request(url, method: .get, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)
                 .responseData { response in
                     switch response.result {
