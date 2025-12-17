@@ -1,8 +1,8 @@
 //
 //  WikiToMarkdownConverter.swift
-//  WikiMCP
+//  WikiCore
 //
-//  Created by phoenix on 2025/12/15.
+//  Created by phoenix on 2025/12/17.
 //
 
 import Foundation
@@ -11,20 +11,25 @@ import SwiftSoup
 // MARK: - Conversion Result
 
 /// 转换结果，包含 Markdown 内容和保存路径
-struct WikiConversionResult {
-    let markdown: String
-    let outputDirectory: URL
-    let markdownFile: URL
-    let downloadedImages: [String: URL]  // 原始 URL -> 本地路径
+public struct WikiConversionResult: Sendable {
+    public let markdown: String
+    public let outputDirectory: URL
+    public let markdownFile: URL
+    public let downloadedImages: [String: URL]  // 原始 URL -> 本地路径
 }
 
 // MARK: - Wiki to Markdown Converter
 
 /// 将 Confluence Wiki HTML 转换为 Markdown 格式
-final class WikiToMarkdownConverter: @unchecked Sendable {
+public final class WikiToMarkdownConverter: @unchecked Sendable {
     
     private let baseURL: String
     private let cacheDirectory: URL
+    
+    /// 日志记录器
+    private var logger: WikiLoggerProtocol {
+        WikiLoggerConfig.shared.logger
+    }
     
     /// 当前转换任务的上下文
     private var currentPageId: String?
@@ -32,7 +37,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     private var currentOutputDir: URL?
     private var imagesToDownload: [(url: String, localName: String)] = []
     
-    init(baseURL: String = "https://wiki.p1.cn") {
+    public init(baseURL: String = "https://wiki.p1.cn") {
         self.baseURL = baseURL
         
         // 使用 Application Support 下的 WikiMCP 作为缓存目录
@@ -45,7 +50,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     /// 从 Wiki 页面 URL 转换为 Markdown（仅返回字符串，不保存文件）
     /// - Parameter url: Wiki 页面 URL
     /// - Returns: Markdown 字符串
-    func convert(url: String) async throws -> String {
+    public func convert(url: String) async throws -> String {
         let html = try await WikiAPIClient.shared.viewPage(url: url)
         return try convertHTML(html)
     }
@@ -53,7 +58,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     /// 从 Wiki 页面 ID 转换为 Markdown（仅返回字符串，不保存文件）
     /// - Parameter pageId: Wiki 页面 ID
     /// - Returns: Markdown 字符串
-    func convert(pageId: String) async throws -> String {
+    public func convert(pageId: String) async throws -> String {
         let html = try await WikiAPIClient.shared.viewPage(pageId: pageId)
         return try convertHTML(html)
     }
@@ -61,7 +66,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     /// 从 Wiki 页面 URL 转换并保存为本地文件（下载图片）
     /// - Parameter url: Wiki 页面 URL
     /// - Returns: WikiConversionResult 包含保存信息
-    func convertAndSave(url: String) async throws -> WikiConversionResult {
+    public func convertAndSave(url: String) async throws -> WikiConversionResult {
         let html = try await WikiAPIClient.shared.viewPage(url: url)
         return try await convertAndSaveHTML(html)
     }
@@ -69,7 +74,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     /// 从 Wiki 页面 ID 转换并保存为本地文件（下载图片）
     /// - Parameter pageId: Wiki 页面 ID
     /// - Returns: WikiConversionResult 包含保存信息
-    func convertAndSave(pageId: String) async throws -> WikiConversionResult {
+    public func convertAndSave(pageId: String) async throws -> WikiConversionResult {
         let html = try await WikiAPIClient.shared.viewPage(pageId: pageId)
         return try await convertAndSaveHTML(html)
     }
@@ -106,9 +111,9 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                 let localPath = outputDir.appendingPathComponent(localName)
                 try imageData.write(to: localPath)
                 downloadedImages[imageURL] = localPath
-                print("✓ 下载图片: \(localName)")
+                FileHandle.standardError.write("✓ 下载图片: \(localName)\n".data(using: .utf8)!)
             } catch {
-                print("✗ 下载图片失败: \(imageURL) - \(error.localizedDescription)")
+                FileHandle.standardError.write("✗ 下载图片失败: \(imageURL) - \(error.localizedDescription)\n".data(using: .utf8)!)
             }
         }
         
@@ -171,7 +176,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     /// 将 HTML 字符串转换为 Markdown
     /// - Parameter html: 完整的 HTML 页面
     /// - Returns: Markdown 字符串
-    func convertHTML(_ html: String) throws -> String {
+    public func convertHTML(_ html: String) throws -> String {
         let document = try SwiftSoup.parse(html)
         
         var markdownParts: [String] = []
@@ -550,34 +555,27 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     }
     
     /// 从 URL 生成本地图片文件名
-    /// 例如：https://wiki.p1.cn/download/attachments/87451209/image2025-12-15_15-35-42.png?version=1&...
-    /// 生成：87451209_image2025-12-15_15-35-42.png
     private func generateLocalImageName(from urlString: String, pageId: String) -> String {
         guard let url = URL(string: urlString) else {
             return "\(pageId)_image.png"
         }
         
-        // 获取路径最后一部分作为文件名
         let pathComponents = url.path.split(separator: "/")
         
-        // 查找 attachments 后面的 pageId 和文件名
         if let attachmentsIndex = pathComponents.firstIndex(where: { $0 == "attachments" }),
            attachmentsIndex + 2 < pathComponents.count {
             let attachmentPageId = String(pathComponents[attachmentsIndex + 1])
             let fileName = String(pathComponents[attachmentsIndex + 2])
             
-            // URL 解码文件名，并将空格替换为下划线（Markdown 兼容）
             let decodedFileName = (fileName.removingPercentEncoding ?? fileName)
                 .replacingOccurrences(of: " ", with: "_")
             return "\(attachmentPageId)_\(decodedFileName)"
         }
         
-        // 备用方案：使用 URL 的最后一部分
         let lastComponent = url.lastPathComponent
         let decodedName = (lastComponent.removingPercentEncoding ?? lastComponent)
             .replacingOccurrences(of: " ", with: "_")
         
-        // 确保有扩展名
         if decodedName.contains(".") {
             return "\(pageId)_\(decodedName)"
         } else {
@@ -591,12 +589,10 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
         var href = try element.attr("href")
         let text = try convertInlineContent(element)
         
-        // 如果是相对路径，拼接 baseURL
         if !href.isEmpty && !href.hasPrefix("http") && !href.hasPrefix("#") && !href.hasPrefix("mailto:") {
             href = baseURL + href
         }
         
-        // 如果链接文字为空，使用 href
         let linkText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if linkText.isEmpty {
             return href
@@ -620,10 +616,8 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                 } else if let childElement = child as? Element {
                     let childTag = childElement.tagName().lowercased()
                     if childTag == "ul" {
-                        // 嵌套无序列表
                         itemContent += "\n" + (try convertUnorderedList(childElement, level: level + 1))
                     } else if childTag == "ol" {
-                        // 嵌套有序列表
                         itemContent += "\n" + (try convertOrderedList(childElement, level: level + 1))
                     } else {
                         itemContent += try convertSingleElement(childElement)
@@ -632,12 +626,7 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
             }
             
             let cleanContent = itemContent.trimmingCharacters(in: .whitespacesAndNewlines)
-            if cleanContent.contains("\n") && !cleanContent.hasPrefix("  ") {
-                // 处理多行内容
-                result += "\(indent)- \(cleanContent)\n"
-            } else {
-                result += "\(indent)- \(cleanContent)\n"
-            }
+            result += "\(indent)- \(cleanContent)\n"
         }
         
         if level == 0 {
@@ -701,25 +690,20 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     // MARK: - Table Conversion
     
     private func convertTable(_ element: Element) throws -> String {
-        // 检测是否包含嵌套表格
         let hasNestedTable = try !element.select("td table, th table, td .table-wrap, th .table-wrap").isEmpty()
         
         if hasNestedTable {
-            // 包含嵌套表格，使用 HTML 格式输出
             return try convertTableToHTML(element)
         }
         
-        // 不包含嵌套表格，使用 Markdown 格式
         return try convertTableToMarkdown(element)
     }
     
-    /// 将表格转换为 Markdown 格式
     private func convertTableToMarkdown(_ element: Element) throws -> String {
         var rows: [[String]] = []
         var headerRow: [String] = []
         var isHeader = false
         
-        // 只获取直接的行（不包括嵌套表格中的行）
         let directRows = try getDirectTableRows(element)
         
         for (rowIndex, tr) in directRows.enumerated() {
@@ -743,7 +727,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
             if rowIndex == 0 && isHeader {
                 headerRow = cells
             } else if rowIndex == 0 && !isHeader {
-                // 第一行不是 header，创建空 header
                 headerRow = cells.map { _ in "" }
                 rows.append(cells)
             } else {
@@ -751,29 +734,20 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
             }
         }
         
-        // 如果没有行，返回空
         if headerRow.isEmpty && rows.isEmpty {
             return ""
         }
         
-        // 如果只有数据行没有 header，使用第一行作为 header
         if headerRow.isEmpty && !rows.isEmpty {
             headerRow = rows.removeFirst()
         }
         
-        // 构建 Markdown 表格
         var result = ""
-        
-        // Header 行
         result += "| " + headerRow.joined(separator: " | ") + " |\n"
-        
-        // 分隔行
         let separatorCells = headerRow.map { _ in "---" }
         result += "| " + separatorCells.joined(separator: " | ") + " |\n"
         
-        // 数据行
         for row in rows {
-            // 确保每行单元格数量一致
             var paddedRow = row
             while paddedRow.count < headerRow.count {
                 paddedRow.append("")
@@ -785,22 +759,18 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
         return result
     }
     
-    /// 获取表格的直接行（不包括嵌套表格中的行）
     private func getDirectTableRows(_ element: Element) throws -> [Element] {
         var directRows: [Element] = []
         
-        // 先找到 tbody 或直接使用 table
         let tbody = try element.select("> tbody").first() ?? element
         let thead = try element.select("> thead").first()
         
-        // 先处理 thead 中的行
         if let thead = thead {
             for child in thead.children() where child.tagName().lowercased() == "tr" {
                 directRows.append(child)
             }
         }
         
-        // 再处理 tbody 或 table 直接子元素中的行
         for child in tbody.children() where child.tagName().lowercased() == "tr" {
             directRows.append(child)
         }
@@ -808,7 +778,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
         return directRows
     }
     
-    /// 将表格转换为 HTML 格式（用于包含嵌套表格的情况）
     private func convertTableToHTML(_ element: Element) throws -> String {
         var result = "\n<table>\n"
         
@@ -832,7 +801,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
         return result
     }
     
-    /// 将表格单元格转换为 HTML 格式中的内容（递归处理嵌套表格）
     private func convertTableCellToHTML(_ element: Element) throws -> String {
         var result = ""
         
@@ -847,12 +815,10 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                 
                 switch tagName {
                 case "table":
-                    // 嵌套表格：递归调用
                     result += try convertTableToHTML(childElement)
                     
                 case "div":
                     if childElement.hasClass("table-wrap") {
-                        // 表格包装器
                         if let nestedTable = try childElement.select("table").first() {
                             result += try convertTableToHTML(nestedTable)
                         } else {
@@ -861,14 +827,12 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                     } else if childElement.hasClass("content-wrapper") {
                         result += try convertTableCellToHTML(childElement)
                     } else if childElement.hasClass("code") && childElement.hasClass("panel") {
-                        // 代码块
                         result += try convertCodeBlock(childElement)
                     } else {
                         result += try convertSingleElement(childElement)
                     }
                     
                 case "pre":
-                    // 代码块
                     result += try convertPreBlock(childElement)
                     
                 case "ul":
@@ -895,7 +859,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    /// 处理表格单元格内容，保持列表格式
     private func convertTableCellContent(_ element: Element) throws -> String {
         var result = ""
         
@@ -910,19 +873,16 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                 
                 switch tagName {
                 case "ul":
-                    // 无序列表在表格中用 • 代替
                     let items = try childElement.select("li")
                     let itemTexts = try items.map { li -> String in
                         try convertInlineContent(li).trimmingCharacters(in: .whitespacesAndNewlines)
                     }
-                    // 如果之前有内容，先加换行
                     if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         result += "\n"
                     }
                     result += itemTexts.map { "• \($0)" }.joined(separator: "\n")
                     
                 case "ol":
-                    // 有序列表在表格中用数字
                     let items = try childElement.select("li")
                     var index = 1
                     var itemTexts: [String] = []
@@ -931,7 +891,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                         itemTexts.append("\(index). \(text)")
                         index += 1
                     }
-                    // 如果之前有内容，先加换行
                     if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         result += "\n"
                     }
@@ -946,14 +905,12 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                     
                 case "p":
                     let content = try convertInlineContent(childElement)
-                    // 如果之前有内容，先加换行（多个段落之间需要换行）
                     if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         result += "\n"
                     }
                     result += content
                     
                 case "br":
-                    // 处理 <br> 标签，添加换行
                     result += "\n"
                     
                 default:
@@ -968,7 +925,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     // MARK: - Code Block Conversion
     
     private func convertCodeBlock(_ element: Element) throws -> String {
-        // 查找 pre 标签
         if let pre = try element.select("pre").first() {
             return try convertPreBlock(pre)
         }
@@ -976,11 +932,9 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     }
     
     private func convertPreBlock(_ element: Element) throws -> String {
-        // 获取语言
         var language = ""
         let params = try element.attr("data-syntaxhighlighter-params")
         if !params.isEmpty {
-            // 解析 brush: xxx
             let regex = try NSRegularExpression(pattern: "brush:\\s*(\\w+)", options: [])
             if let match = regex.firstMatch(in: params, options: [], range: NSRange(params.startIndex..., in: params)) {
                 if let range = Range(match.range(at: 1), in: params) {
@@ -989,7 +943,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
             }
         }
         
-        // 获取代码内容
         let code = try element.text()
         
         return "```\(language)\n\(code)\n```\n\n"
@@ -1000,7 +953,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     private func extractComments(_ document: Document) throws -> String {
         var comments: [String] = []
         
-        // 只选择顶级评论线程
         let commentThreads = try document.select("#page-comments > .comment-thread")
         
         for thread in commentThreads {
@@ -1013,20 +965,15 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
     
     private func extractCommentsFromThread(_ thread: Element, level: Int) throws -> [String] {
         var comments: [String] = []
-        // 使用多层引用 > 来表示嵌套
         let quotePrefix = String(repeating: "> ", count: level + 1)
         
-        // 获取当前评论（直接子元素）
         for child in thread.children() {
             if child.hasClass("comment") {
-                // 获取作者
                 let author = try child.select(".comment-header .author a").first()?.text() ?? "Unknown"
                 
-                // 获取内容
                 let content = try child.select(".comment-content.wiki-content").first()
                 let commentText = content != nil ? try convertElement(content!).trimmingCharacters(in: .whitespacesAndNewlines) : ""
                 
-                // 获取时间
                 let time = try child.select(".comment-date a").first()?.text() ?? ""
                 
                 if !commentText.isEmpty {
@@ -1038,7 +985,6 @@ final class WikiToMarkdownConverter: @unchecked Sendable {
                     comments.append("")
                 }
             } else if child.hasClass("comment-threads") {
-                // 递归处理子评论线程
                 for childThread in child.children() where childThread.hasClass("comment-thread") {
                     let childComments = try extractCommentsFromThread(childThread, level: level + 1)
                     comments.append(contentsOf: childComments)

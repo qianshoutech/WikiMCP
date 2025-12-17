@@ -9,7 +9,9 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "wikimcp", targets: ["WikiMCP"])
+        .executable(name: "wikimcp", targets: ["WikiMCP"]),
+        .executable(name: "wikicli", targets: ["WikiCLI"]),
+        .library(name: "WikiCore", targets: ["WikiCore"])
     ],
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.10.0"),
@@ -17,14 +19,28 @@ let package = Package(
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.10.0"),
     ],
     targets: [
-        .executableTarget(
-            name: "WikiMCP",
+        // 共享核心库
+        .target(
+            name: "WikiCore",
             dependencies: [
-                .product(name: "MCP", package: "swift-sdk"),
                 "SwiftSoup",
                 "Alamofire",
             ]
         ),
+        // MCP 版本 (原有)
+        .executableTarget(
+            name: "WikiMCP",
+            dependencies: [
+                "WikiCore",
+                .product(name: "MCP", package: "swift-sdk"),
+            ]
+        ),
+        // CLI 版本 (用于 Agent Skill)
+        .executableTarget(
+            name: "WikiCLI",
+            dependencies: [
+                "WikiCore",
+            ]
+        ),
     ]
 )
-

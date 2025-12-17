@@ -8,6 +8,7 @@
 import Foundation
 import MCP
 import Logging
+import WikiCore
 
 // MARK: - MCP Server Setup
 
@@ -26,6 +27,9 @@ struct WikiMCPServer {
             handler.logLevel = .warning
             return handler
         }
+        
+        // 配置 WikiCore 使用静默日志（MCP 模式下不需要 stderr 警告）
+        WikiLoggerConfig.shared.logger = SilentLogger.shared
         
         // 预初始化 CookieManager（从环境变量加载 Cookie）
         _ = CookieManager.shared

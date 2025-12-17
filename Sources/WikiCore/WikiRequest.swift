@@ -1,69 +1,66 @@
 //
 //  WikiRequest.swift
-//  WikiMCP
+//  WikiCore
 //
-//  Created by phoenix on 2025/12/15.
+//  Created by phoenix on 2025/12/17.
 //
 
 import Foundation
 import Alamofire
-import Logging
 
 // MARK: - Search Response Models
 
-struct WikiSearchResponse: Codable {
-    let results: [WikiSearchResult]
-    let start: Int
-    let limit: Int
-    let totalSize: Int
-    let cqlQuery: String?
-    let searchDuration: Int?
+public struct WikiSearchResponse: Codable, Sendable {
+    public let results: [WikiSearchResult]
+    public let start: Int
+    public let limit: Int
+    public let totalSize: Int
+    public let cqlQuery: String?
+    public let searchDuration: Int?
     
     enum CodingKeys: String, CodingKey {
         case results, start, limit, totalSize, cqlQuery, searchDuration
     }
 }
 
-struct WikiSearchResult: Codable {
-    let content: WikiContent?
-    let title: String?
-    let excerpt: String?
-    let url: String?
-    let resultGlobalContainer: WikiContainer?
-    let entityType: String?
-    let iconCssClass: String?
-    let lastModified: String?
-    let friendlyLastModified: String?
+public struct WikiSearchResult: Codable, Sendable {
+    public let content: WikiContent?
+    public let title: String?
+    public let excerpt: String?
+    public let url: String?
+    public let resultGlobalContainer: WikiContainer?
+    public let entityType: String?
+    public let iconCssClass: String?
+    public let lastModified: String?
+    public let friendlyLastModified: String?
 }
 
-struct WikiContent: Codable {
-    let id: String?
-    let type: String?
-    let status: String?
-    let title: String?
-    let _expandable: WikiExpandable?
+public struct WikiContent: Codable, Sendable {
+    public let id: String?
+    public let type: String?
+    public let status: String?
+    public let title: String?
+    public let _expandable: WikiExpandable?
     
     enum CodingKeys: String, CodingKey {
         case id, type, status, title, _expandable
     }
 }
 
-struct WikiExpandable: Codable {
-    let space: String?
+public struct WikiExpandable: Codable, Sendable {
+    public let space: String?
 }
 
-struct WikiContainer: Codable {
-    let title: String?
-    let displayUrl: String?
+public struct WikiContainer: Codable, Sendable {
+    public let title: String?
+    public let displayUrl: String?
 }
-
-
 
 // MARK: - Wiki API Client
 
-final class WikiAPIClient: @unchecked Sendable {
+public final class WikiAPIClient: @unchecked Sendable {
     
-    static let shared = WikiAPIClient()
+    public static let shared = WikiAPIClient()
     
     private let baseURL = "https://wiki.p1.cn"
     
@@ -71,7 +68,9 @@ final class WikiAPIClient: @unchecked Sendable {
     private let cookieManager = CookieManager.shared
     
     /// 日志记录器
-    private let logger = Logger(label: "com.wikimcp.api")
+    private var logger: WikiLoggerProtocol {
+        WikiLoggerConfig.shared.logger
+    }
     
     /// 获取请求头（包含动态获取的 Cookie）
     private var defaultHeaders: HTTPHeaders {
@@ -88,9 +87,7 @@ final class WikiAPIClient: @unchecked Sendable {
     
     private init() {
         // 初始化时检查 Cookie 状态
-        if let cookie = cookieManager.getCookie(), !cookie.isEmpty {
-            logger.info("已从环境变量 WIKI_COOKIE 加载 Cookie")
-        } else {
+        if cookieManager.getCookie() == nil || cookieManager.getCookie()?.isEmpty == true {
             logger.warning("未配置 Cookie，请设置环境变量 WIKI_COOKIE")
         }
     }
@@ -103,7 +100,7 @@ final class WikiAPIClient: @unchecked Sendable {
     ///   - start: 起始位置，默认 0
     ///   - limit: 返回数量限制，默认 20
     /// - Returns: WikiSearchResponse
-    func search(
+    public func search(
         query: String,
         start: Int = 0,
         limit: Int = 20
@@ -139,7 +136,7 @@ final class WikiAPIClient: @unchecked Sendable {
     /// 获取页面 HTML 内容
     /// - Parameter pageId: 页面 ID
     /// - Returns: 页面 HTML 字符串
-    func viewPage(pageId: String) async throws -> String {
+    public func viewPage(pageId: String) async throws -> String {
         let url = "\(baseURL)/pages/viewpage.action"
         
         let parameters: Parameters = [
@@ -163,7 +160,7 @@ final class WikiAPIClient: @unchecked Sendable {
     /// 获取页面 HTML 内容
     /// - Parameter url: 页面地址
     /// - Returns: 页面 HTML 字符串
-    func viewPage(url: String) async throws -> String {
+    public func viewPage(url: String) async throws -> String {
         
         return try await withCheckedThrowingContinuation { continuation in
             AF.request(url, method: .get, parameters: nil, headers: defaultHeaders)
@@ -182,7 +179,7 @@ final class WikiAPIClient: @unchecked Sendable {
     /// 通过完整 URL 下载图片
     /// - Parameter url: 完整的图片 URL
     /// - Returns: 图片 Data
-    func downloadImage(from url: String) async throws -> Data {
+    public func downloadImage(from url: String) async throws -> Data {
         return try await withCheckedThrowingContinuation { continuation in
             AF.request(url, method: .get, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)
@@ -200,13 +197,13 @@ final class WikiAPIClient: @unchecked Sendable {
 
 // MARK: - Error Types
 
-enum WikiAPIError: Error, LocalizedError {
+public enum WikiAPIError: Error, LocalizedError {
     case invalidURL
     case noData
     case decodingFailed(Error)
     case networkError(Error)
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "Invalid URL"
@@ -219,3 +216,4 @@ enum WikiAPIError: Error, LocalizedError {
         }
     }
 }
+

@@ -1,8 +1,8 @@
 //
 //  CookieManager.swift
-//  WikiMCP
+//  WikiCore
 //
-//  Created by phoenix on 2025/12/16.
+//  Created by phoenix on 2025/12/17.
 //
 
 import Foundation
@@ -11,9 +11,9 @@ import Foundation
 
 /// Cookie 管理器
 /// 从环境变量 WIKI_COOKIE 读取 cookie
-final class CookieManager: @unchecked Sendable {
+public final class CookieManager: @unchecked Sendable {
     
-    static let shared = CookieManager()
+    public static let shared = CookieManager()
     
     /// Cookie 值（从环境变量加载）
     private let cookie: String?
@@ -23,7 +23,8 @@ final class CookieManager: @unchecked Sendable {
     }
     
     /// 获取 cookie
-    func getCookie() -> String? {
+    public func getCookie() -> String? {
         return cookie
     }
 }
+

@@ -19,6 +19,26 @@
             "target": "wikimcp",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release wikimcp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WikiMCP}",
+            "name": "Debug wikicli",
+            "target": "wikicli",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug wikicli"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WikiMCP}",
+            "name": "Release wikicli",
+            "target": "wikicli",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release wikicli"
         }
     ]
 }
