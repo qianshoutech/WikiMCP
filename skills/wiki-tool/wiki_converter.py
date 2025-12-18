@@ -715,8 +715,18 @@ class WikiToMarkdownConverter:
         """获取表格的直接行元素"""
         direct_rows: List[Tag] = []
         
-        tbody = element.select_one('> tbody') or element
-        thead = element.select_one('> thead')
+        # BeautifulSoup 不支持 "> tbody" 选择器，手动查找直接子元素
+        tbody = None
+        thead = None
+        for child in element.children:
+            if isinstance(child, Tag):
+                if child.name and child.name.lower() == 'tbody':
+                    tbody = child
+                elif child.name and child.name.lower() == 'thead':
+                    thead = child
+        
+        if tbody is None:
+            tbody = element
         
         if thead:
             for child in thead.children:
