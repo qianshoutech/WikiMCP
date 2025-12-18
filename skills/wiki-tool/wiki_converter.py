@@ -661,6 +661,17 @@ class WikiToMarkdownConverter:
         if has_nested_table:
             return self._convert_table_to_html(element)
         
+        # 检查是否有单元格合并（rowspan/colspan）- Markdown 不支持
+        has_merged_cells = any(
+            cell.get('rowspan') or cell.get('colspan')
+            for cell in element.select('td, th')
+            if (cell.get('rowspan') and int(cell.get('rowspan', 1)) > 1) or 
+               (cell.get('colspan') and int(cell.get('colspan', 1)) > 1)
+        )
+        
+        if has_merged_cells:
+            return self._convert_table_to_html(element)
+        
         return self._convert_table_to_markdown(element)
     
     def _convert_table_to_markdown(self, element: Tag) -> str:
@@ -740,24 +751,34 @@ class WikiToMarkdownConverter:
         return direct_rows
     
     def _convert_table_to_html(self, element: Tag) -> str:
-        """将嵌套表格转换为 HTML 格式"""
+        """将嵌套表格或带合并单元格的表格转换为 HTML 格式"""
         result = "\n<table>\n"
         
         direct_rows = self._get_direct_table_rows(element)
         
         for tr in direct_rows:
-            result += "\n<tr>\n"
+            result += "<tr>\n"
             
             for cell in tr.children:
                 if isinstance(cell, Tag) and cell.name:
                     tag_name = cell.name.lower()
                     if tag_name in ('th', 'td'):
+                        # 保留 rowspan 和 colspan 属性
+                        attrs = []
+                        rowspan = cell.get('rowspan')
+                        colspan = cell.get('colspan')
+                        if rowspan and int(rowspan) > 1:
+                            attrs.append(f'rowspan="{rowspan}"')
+                        if colspan and int(colspan) > 1:
+                            attrs.append(f'colspan="{colspan}"')
+                        
+                        attr_str = ' ' + ' '.join(attrs) if attrs else ''
                         cell_content = self._convert_table_cell_to_html(cell)
-                        result += f"\n<{tag_name}>\n\n{cell_content}\n\n</{tag_name}>\n"
+                        result += f"<{tag_name}{attr_str}>\n\n{cell_content}\n\n</{tag_name}>\n"
             
-            result += "\n</tr>\n"
+            result += "</tr>\n"
         
-        result += "\n</table>\n\n"
+        result += "</table>\n\n"
         return result
     
     def _convert_table_cell_to_html(self, element: Tag) -> str:
