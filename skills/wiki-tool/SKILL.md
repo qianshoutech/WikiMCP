@@ -12,12 +12,21 @@ allowed-tools: Read, Grep, Glob, Bash
 
 所有文件位于此 Skill 目录（SKILL.md 同级目录）:
 
-- 二进制文件: `wikicli`
+- 主脚本: `wikicli.py`
 - 配置文件: `env`
+- 依赖文件: `requirements.txt`
 
 ## 环境配置
 
 Cookie 已配置在 `env` 文件中，使用时通过 `source` 命令加载。
+
+### 首次使用
+
+首次使用前需要安装 Python 依赖：
+
+```bash
+pip3 install -r {SKILL_DIR}/requirements.txt
+```
 
 ## 命令用法
 
@@ -27,20 +36,20 @@ Cookie 已配置在 `env` 文件中，使用时通过 `source` 命令加载。
 
 ```bash
 # 加载配置并通过 URL 转换
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
 
 # 通过页面 ID 转换
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli convert --page-id 12345
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py convert --page-id 12345
 ```
 
 ### 2. 搜索 Wiki 内容
 
 ```bash
 # 基本搜索
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search "关键词"
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search "关键词"
 
 # 带参数搜索
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search --query "API 文档" --limit 20
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search --query "API 文档" --limit 20
 ```
 
 ## 使用流程
@@ -76,6 +85,7 @@ source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search --query "API 文档" --limi
 2. **网络依赖**: 需要能访问 wiki.p1.cn 的网络环境
 3. **图片下载**: convert 命令会自动下载页面中的图片到本地
 4. **搜索限制**: 搜索结果最多返回 50 条
+5. **Python 依赖**: 需要 Python 3.8+ 和 requests、beautifulsoup4、lxml 库
 
 ## 常见问题处理
 
@@ -89,3 +99,11 @@ source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search --query "API 文档" --limi
 
 - 尝试不同的搜索关键词
 - 检查 URL 或页面 ID 是否正确
+
+### 依赖问题
+
+如果提示缺少模块，请运行：
+
+```bash
+pip3 install -r {SKILL_DIR}/requirements.txt
+```
