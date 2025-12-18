@@ -1,108 +1,108 @@
 ---
 name: wiki-tool
-description: 访问公司内部 Confluence Wiki 文档。当用户提到 wiki.p1.cn、内部文档、公司Wiki、知识库，或需要搜索/查看公司内部文档时使用此 Skill。
+description: Access internal Confluence Wiki documentation. Use this Skill when users mention wiki.p1.cn, internal docs, company Wiki, knowledge base, or need to search/view internal company documentation.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-# Wiki 文档工具
+# Wiki Documentation Tool
 
-此 Skill 提供访问公司内部 Confluence Wiki (wiki.p1.cn) 的能力。
+This Skill provides access to the internal Confluence Wiki (wiki.p1.cn).
 
-## 工具位置
+## File Locations
 
-所有文件位于此 Skill 目录（SKILL.md 同级目录）:
+All files are located in this Skill directory (same directory as SKILL.md):
 
-- 主脚本: `wikicli.py`
-- 配置文件: `env`
-- 依赖文件: `requirements.txt`
+- Main script: `wikicli.py`
+- Config file: `env`
+- Dependencies: `requirements.txt`
 
-## 环境配置
+## Environment Configuration
 
-Cookie 已配置在 `env` 文件中，使用时通过 `source` 命令加载。
+Cookie is configured in the `env` file, load it using the `source` command before use.
 
-### 首次使用
+### First Time Setup
 
-首次使用前需要安装 Python 依赖：
+Install Python dependencies before first use:
 
 ```bash
 pip3 install -r {SKILL_DIR}/requirements.txt
 ```
 
-## 命令用法
+## Command Usage
 
-**注意**: 以下命令中 `{SKILL_DIR}` 表示此 SKILL.md 所在目录的路径。
+**Note**: In the following commands, `{SKILL_DIR}` refers to the path of this SKILL.md directory.
 
-### 1. 将 Wiki 页面转换为 Markdown
+### 1. Convert Wiki Page to Markdown
 
 ```bash
-# 加载配置并通过 URL 转换
+# Load config and convert by URL
 source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
 
-# 通过页面 ID 转换
+# Convert by page ID
 source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py convert --page-id 12345
 ```
 
-### 2. 搜索 Wiki 内容
+### 2. Search Wiki Content
 
 ```bash
-# 基本搜索
-source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search "关键词"
+# Basic search
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search "keyword"
 
-# 带参数搜索
-source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search --query "API 文档" --limit 20
+# Search with parameters
+source {SKILL_DIR}/env && python3 {SKILL_DIR}/wikicli.py search --query "API docs" --limit 20
 ```
 
-## 使用流程
+## Workflow
 
-### 当用户发送 Wiki 链接时
+### When User Sends a Wiki Link
 
-1. 直接使用 `convert` 命令获取页面内容
-2. 解读并总结关键信息给用户
+1. Use the `convert` command to get page content
+2. Interpret and summarize key information for the user
 
-### 当用户需要查找信息时
+### When User Needs to Find Information
 
-1. 先使用 `search` 命令搜索相关内容
-2. 展示搜索结果供用户选择
-3. 用户确认后使用 `convert` 获取详细内容
+1. First use the `search` command to find relevant content
+2. Display search results for user selection
+3. After user confirmation, use `convert` to get detailed content
 
-## 输出说明
+## Output Description
 
-### convert 命令输出
+### convert Command Output
 
-- Markdown 文件路径
-- 输出目录路径
-- 下载的图片数量
-- 完整的 Markdown 内容
+- Markdown file path
+- Output directory path
+- Number of downloaded images
+- Complete Markdown content
 
-### search 命令输出
+### search Command Output
 
-- 搜索结果总数
-- 每条结果包含：标题、作者、最后修改时间、摘要、URL
+- Total number of search results
+- Each result includes: title, author, last modified time, excerpt, URL
 
-## 注意事项
+## Notes
 
-1. **Cookie 有效性**: Cookie 可能会过期，如果请求失败请提示用户更新 Cookie
-2. **网络依赖**: 需要能访问 wiki.p1.cn 的网络环境
-3. **图片下载**: convert 命令会自动下载页面中的图片到本地
-4. **搜索限制**: 搜索结果最多返回 50 条
-5. **Python 依赖**: 需要 Python 3.8+ 和 requests、beautifulsoup4、lxml 库
+1. **Cookie Validity**: Cookie may expire, prompt user to update Cookie if requests fail
+2. **Network Dependency**: Requires network access to wiki.p1.cn
+3. **Image Download**: convert command automatically downloads page images locally
+4. **Search Limit**: Search results return maximum 50 items
+5. **Python Dependencies**: Requires Python 3.8+ and requests, beautifulsoup4, lxml libraries
 
-## 常见问题处理
+## Troubleshooting
 
-### 请求失败
+### Request Failed
 
-- 检查 WIKI_COOKIE 环境变量是否设置
-- 检查 Cookie 是否过期
-- 检查网络连接
+- Check if WIKI_COOKIE environment variable is set
+- Check if Cookie has expired
+- Check network connection
 
-### 找不到内容
+### Content Not Found
 
-- 尝试不同的搜索关键词
-- 检查 URL 或页面 ID 是否正确
+- Try different search keywords
+- Verify URL or page ID is correct
 
-### 依赖问题
+### Dependency Issues
 
-如果提示缺少模块，请运行：
+If missing module errors occur, run:
 
 ```bash
 pip3 install -r {SKILL_DIR}/requirements.txt
