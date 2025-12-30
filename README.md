@@ -136,6 +136,12 @@ skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..." --browser edge
 1. 打开「系统设置」→「隐私与安全性」→「完全磁盘访问权限」
 2. 添加并启用 Cursor 或你使用的终端应用（如 Warp, iTerm2 等）
 
+### Skill 使用安全弹窗
+
+首次使用可能会弹出安全弹窗显示恶意软件或不明开发者, 需要:
+
+打开「系统设置」→「隐私与安全性」→ wikicli「扔要打开」
+
 ---
 
 ## Cookie 配置（备用方式）
