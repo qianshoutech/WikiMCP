@@ -17,6 +17,7 @@ let package = Package(
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.10.0"),
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0"),
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.10.0"),
+        .package(url: "https://github.com/steipete/SweetCookieKit.git", exact: "0.1.2"),
     ],
     targets: [
         // 共享核心库
@@ -25,6 +26,7 @@ let package = Package(
             dependencies: [
                 "SwiftSoup",
                 "Alamofire",
+                "SweetCookieKit",
             ]
         ),
         // MCP 版本 (原有)

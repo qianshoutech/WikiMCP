@@ -1,13 +1,13 @@
 {
-  "originHash" : "4413b1e6e831251ac81dec714fb331eb921623c1a5545429162c6d45b9f3904b",
+  "originHash" : "ecdd3bfe45f9ace7ab3addd5aabe8a2b47974b36f59336a33e36faba5ad07453",
   "pins" : [
     {
       "identity" : "alamofire",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Alamofire/Alamofire.git",
       "state" : {
-        "revision" : "513364f870f6bfc468f9d2ff0a95caccc10044c5",
-        "version" : "5.10.2"
+        "revision" : "7be73f6c2b5cd90e40798b06ebd5da8f9f79cf88",
+        "version" : "5.11.0"
       }
     },
     {
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "0d91406ecd4d6c1c56275866f00508d9aeacc92a",
         "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "sweetcookiekit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/steipete/SweetCookieKit.git",
+      "state" : {
+        "revision" : "271434042c0af81208fefb8c32faec737dc7b8ae",
+        "version" : "0.1.2"
       }
     },
     {

@@ -10,14 +10,20 @@ allowed-tools: Read, Grep, Glob, Bash
 
 ## 工具位置
 
-所有文件位于此 Skill 目录（SKILL.md 同级目录）:
+二进制文件位于此 Skill 目录（SKILL.md 同级目录）: `wikicli`
 
-- 二进制文件: `wikicli`
-- 配置文件: `env`
+## Cookie 自动获取
 
-## 环境配置
+**无需手动配置 Cookie！** 本工具会自动从本地浏览器读取 Cookie。
 
-Cookie 已配置在 `env` 文件中，使用时通过 `source` 命令加载。
+支持的浏览器：
+- chrome (默认)
+- safari
+- chromeBeta, chromeCanary
+- arc, arcBeta, arcCanary
+- edge, edgeBeta, edgeCanary
+- brave, braveBeta, braveNightly
+- firefox, chromium, vivaldi, chatgptAtlas
 
 ## 命令用法
 
@@ -26,21 +32,28 @@ Cookie 已配置在 `env` 文件中，使用时通过 `source` 命令加载。
 ### 1. 将 Wiki 页面转换为 Markdown
 
 ```bash
-# 加载配置并通过 URL 转换
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
+# 通过 URL 转换（使用默认 Chrome 浏览器）
+{SKILL_DIR}/wikicli convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
 
 # 通过页面 ID 转换
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli convert --page-id 12345
+{SKILL_DIR}/wikicli convert --page-id 12345
+
+# 使用其他浏览器
+{SKILL_DIR}/wikicli convert "https://wiki.p1.cn/..." --browser safari
+{SKILL_DIR}/wikicli convert --page-id 12345 --browser edge
 ```
 
 ### 2. 搜索 Wiki 内容
 
 ```bash
 # 基本搜索
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search "关键词"
+{SKILL_DIR}/wikicli search "关键词"
 
 # 带参数搜索
-source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search --query "API 文档" --limit 20
+{SKILL_DIR}/wikicli search --query "API 文档" --limit 20
+
+# 使用其他浏览器
+{SKILL_DIR}/wikicli search "关键词" --browser arc
 ```
 
 ## 使用流程
@@ -70,20 +83,33 @@ source {SKILL_DIR}/env && {SKILL_DIR}/wikicli search --query "API 文档" --limi
 - 搜索结果总数
 - 每条结果包含：标题、作者、最后修改时间、摘要、URL
 
-## 注意事项
+## 首次使用注意事项
 
-1. **Cookie 有效性**: Cookie 可能会过期，如果请求失败请提示用户更新 Cookie
-2. **网络依赖**: 需要能访问 wiki.p1.cn 的网络环境
-3. **图片下载**: convert 命令会自动下载页面中的图片到本地
-4. **搜索限制**: 搜索结果最多返回 50 条
+### Chromium 系浏览器（Chrome、Edge、Arc、Brave 等）
+
+首次运行时，系统可能会弹出钥匙串访问提示：
+> "xxx 想要访问你的钥匙串中的密钥 Chrome Safe Storage"
+
+**请选择「始终允许」** 以避免每次运行都弹出提示。
+
+### Safari 浏览器
+
+需要在系统设置中为终端或运行环境开启「完全磁盘访问权限」：
+1. 打开「系统设置」→「隐私与安全性」→「完全磁盘访问权限」
+2. 添加并启用 Cursor 或你使用的终端应用
 
 ## 常见问题处理
 
 ### 请求失败
 
-- 检查 WIKI_COOKIE 环境变量是否设置
-- 检查 Cookie 是否过期
+- 确认浏览器已登录 wiki.p1.cn
+- 检查是否选择了正确的浏览器类型
+- 对于 Safari，检查是否开启了完全磁盘访问权限
 - 检查网络连接
+
+### 钥匙串访问被拒绝
+
+- 如果之前选择了「拒绝」，需要在「钥匙串访问」应用中手动删除该条目，然后重新运行
 
 ### 找不到内容
 

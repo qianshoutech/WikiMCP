@@ -56,13 +56,21 @@ curl -fsSL https://raw.githubusercontent.com/qianshoutech/WikiMCP/main/install.s
   "mcpServers": {
     "wikimcp": {
       "command": "~/.local/bin/wikimcp",
-      "env": {
-        "WIKI_COOKIE": "your_cookie_string_here"
-      }
+      "args": ["chrome"]
     }
   }
 }
 ```
+
+**args 参数说明**：指定从哪个浏览器读取 Cookie，默认为 `chrome`。
+
+支持的浏览器：
+- `safari`
+- `chrome`, `chromeBeta`, `chromeCanary`
+- `arc`, `arcBeta`, `arcCanary`
+- `edge`, `edgeBeta`, `edgeCanary`
+- `brave`, `braveBeta`, `braveNightly`
+- `firefox`, `chromium`, `vivaldi`, `chatgptAtlas`
 
 #### MCP 工具
 
@@ -77,7 +85,7 @@ curl -fsSL https://raw.githubusercontent.com/qianshoutech/WikiMCP/main/install.s
 
 [![Download Skill](https://img.shields.io/badge/Download-wiki--tool.tar.gz-green?style=for-the-badge)](https://github.com/qianshoutech/WikiMCP/releases/latest/download/wiki-tool.tar.gz)
 
-下载解压后, 在 `env` 中配置 Cookie, 然后将 `wiki-tool` 文件夹移动到 `~/.claude/skills`, 或项目中的的 `.claude/skills` 目录
+下载解压后, 将 `wiki-tool` 文件夹移动到 `~/.claude/skills`, 或项目中的的 `.claude/skills` 目录
 
 目录结构：
 ```
@@ -85,26 +93,21 @@ your-project/
 └── skills/
     └── wiki-tool/
         ├── SKILL.md    # Skill 定义
-        ├── wikicli     # CLI 工具
-        └── env         # 环境变量示例
-```
-
-#### 配置环境变量
-
-编辑 `skills/wiki-tool/env` 文件，设置你的 Cookie：
-
-```bash
-export WIKI_COOKIE="your_cookie_string_here"
+        └── wikicli     # CLI 工具
 ```
 
 #### CLI 命令
 
 ```bash
-# 搜索
-source skills/wiki-tool/env && skills/wiki-tool/wikicli search "关键词"
+# 搜索（默认使用 Chrome）
+skills/wiki-tool/wikicli search "关键词"
 
 # 转换页面
-source skills/wiki-tool/env && skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..."
+skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..."
+
+# 使用其他浏览器
+skills/wiki-tool/wikicli search "关键词" --browser safari
+skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..." --browser edge
 ```
 
 #### 在 Cursor / Antigravity 中使用 Skill
@@ -113,9 +116,31 @@ source skills/wiki-tool/env && skills/wiki-tool/wikicli convert "https://wiki.p1
 
 ---
 
-## Cookie 配置
+## ⚠️ 首次使用权限配置
 
-两种方式都需要有效的 Cookie 才能访问 Wiki。
+本工具会自动从本地浏览器读取 Cookie，首次使用时需要进行以下权限配置：
+
+### Chromium 系浏览器（Chrome、Edge、Arc、Brave 等）
+
+首次运行时，系统会弹出钥匙串访问提示：
+
+> "xxx 想要访问你的钥匙串中的密钥 Chrome Safe Storage"
+
+**请输入密码并选择「始终允许」** 以避免每次运行都弹出提示。
+
+
+### Safari 浏览器
+
+需要在系统设置中为终端或运行环境开启「完全磁盘访问权限」：
+
+1. 打开「系统设置」→「隐私与安全性」→「完全磁盘访问权限」
+2. 添加并启用 Cursor 或你使用的终端应用（如 Warp, iTerm2 等）
+
+---
+
+## Cookie 配置（备用方式）
+
+如果自动读取浏览器 Cookie 不可用，可以使用环境变量方式：
 
 ### 如何获取 Cookie
 
@@ -147,9 +172,10 @@ WikiMCP/
 
 ## 注意事项
 
-1. 需要有效的 Wiki 访问权限（Cookie 认证）
-2. Cookie 过期后需要重新获取
-3. 仅支持 macOS
+1. 需要有效的 Wiki 访问权限（确保浏览器已登录 wiki.p1.cn）
+2. Chromium 系浏览器首次使用需要授权钥匙串访问
+3. Safari 需要开启完全磁盘访问权限
+4. 仅支持 macOS
 
 ## License
 

@@ -6,9 +6,9 @@
 //
 //  命令行工具，用于 Agent Skill 调用
 //  用法:
-//    wikicli convert --url <url>
-//    wikicli convert --page-id <id>
-//    wikicli search --query <query> [--limit <limit>]
+//    wikicli convert --url <url> [--browser <browser>]
+//    wikicli convert --page-id <id> [--browser <browser>]
+//    wikicli search --query <query> [--limit <limit>] [--browser <browser>]
 //
 
 import Foundation
@@ -46,6 +46,7 @@ struct WikiCLI {
     static func handleConvert(arguments: [String]) async {
         var url: String?
         var pageId: String?
+        var browser: String = "chrome"
         
         var i = 0
         while i < arguments.count {
@@ -66,6 +67,14 @@ struct WikiCLI {
                     printError("--page-id 需要参数")
                     exit(1)
                 }
+            case "--browser", "-b":
+                if i + 1 < arguments.count {
+                    browser = arguments[i + 1]
+                    i += 2
+                } else {
+                    printError("--browser 需要参数")
+                    exit(1)
+                }
             default:
                 // 如果第一个参数看起来像 URL，直接当作 URL
                 if i == 0 && (arguments[i].hasPrefix("http") || arguments[i].contains("wiki.p1.cn")) {
@@ -82,6 +91,9 @@ struct WikiCLI {
             printError("必须提供 --url 或 --page-id 参数")
             exit(1)
         }
+        
+        // 设置浏览器类型
+        CookieManager.shared.setBrowser(browser)
         
         do {
             let converter = WikiToMarkdownConverter()
@@ -115,6 +127,7 @@ struct WikiCLI {
     static func handleSearch(arguments: [String]) async {
         var query: String?
         var limit = 10
+        var browser: String = "chrome"
         
         var i = 0
         while i < arguments.count {
@@ -135,6 +148,14 @@ struct WikiCLI {
                     printError("--limit 需要参数")
                     exit(1)
                 }
+            case "--browser", "-b":
+                if i + 1 < arguments.count {
+                    browser = arguments[i + 1]
+                    i += 2
+                } else {
+                    printError("--browser 需要参数")
+                    exit(1)
+                }
             default:
                 // 如果是第一个参数且不是选项，当作 query
                 if i == 0 && !arguments[i].hasPrefix("-") {
@@ -151,6 +172,9 @@ struct WikiCLI {
             printError("必须提供 --query 参数")
             exit(1)
         }
+        
+        // 设置浏览器类型
+        CookieManager.shared.setBrowser(browser)
         
         do {
             let response = try await WikiAPIClient.shared.search(query: searchQuery, limit: limit)
@@ -190,6 +214,7 @@ struct WikiCLI {
     // MARK: - Helpers
     
     static func printUsage() {
+        let browserList = CookieManager.supportedBrowsers.joined(separator: ", ")
         let usage = """
         WikiCLI - Wiki 命令行工具 (用于 Agent Skill)
         
@@ -206,14 +231,20 @@ struct WikiCLI {
           --page-id, -p   Wiki 页面 ID
           --query, -q     搜索关键词
           --limit, -l     搜索结果数量限制 (默认 10, 最大 50)
+          --browser, -b   浏览器类型 (默认 chrome)
         
-        环境变量:
-          WIKI_COOKIE     Wiki 认证 Cookie (必需)
+        支持的浏览器:
+          \(browserList)
         
         示例:
           wikicli convert "https://wiki.p1.cn/pages/viewpage.action?pageId=12345"
+          wikicli convert "https://wiki.p1.cn/..." --browser safari
           wikicli search "API 文档"
-          wikicli search --query "部署指南" --limit 20
+          wikicli search --query "部署指南" --limit 20 --browser edge
+        
+        注意:
+          - Chromium 系浏览器可能会触发钥匙串访问提示（Chrome Safe Storage），请选择"始终允许"
+          - Safari 需要开启"完全磁盘访问权限"
         """
         print(usage)
     }

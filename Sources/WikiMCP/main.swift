@@ -17,7 +17,7 @@ import WikiCore
 /// 1. wiki_to_md - 将 Wiki 页面转换为 Markdown
 /// 2. search_wiki - 搜索 Wiki 内容
 ///
-/// Cookie 配置: 通过环境变量 WIKI_COOKIE 设置
+/// Cookie 配置: 从浏览器实时读取（通过 args 参数配置浏览器类型）
 
 struct WikiMCPServer {
     static func main() async throws {
@@ -31,8 +31,15 @@ struct WikiMCPServer {
         // 配置 WikiCore 使用静默日志（MCP 模式下不需要 stderr 警告）
         WikiLoggerConfig.shared.logger = SilentLogger.shared
         
-        // 预初始化 CookieManager（从环境变量加载 Cookie）
-        _ = CookieManager.shared
+        // 解析命令行参数设置浏览器类型
+        // 用法: wikimcp [browser_type]
+        // 例如: wikimcp chrome, wikimcp safari, wikimcp edge
+        let arguments = CommandLine.arguments
+        if arguments.count > 1 {
+            let browserArg = arguments[1].lowercased()
+            CookieManager.shared.setBrowser(browserArg)
+        }
+        // 默认使用 chrome
         
         let logger = Logger(label: "com.wikimcp.server")
         
