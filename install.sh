@@ -130,22 +130,30 @@ if [ -x "$HOME/.local/bin/$BINARY_NAME" ]; then
   "mcpServers": {
     "wikimcp": {
       "command": "~/.local/bin/wikimcp",
-      "env": {
-        "WIKI_COOKIE": "your_cookie_string_here"
-      }
+      "args": ["chrome"]
     }
   }
 }
 EOF
   printf "\n"
+  printf "${YELLOW}args 参数说明: 指定从哪个浏览器读取 Cookie，默认为 chrome${NC}\n"
+  printf "${YELLOW}支持的浏览器: safari, chrome, chromeBeta, chromeCanary, arc, edge, brave, firefox, vivaldi 等${NC}\n"
   printf "${YELLOW}提示: 其他支持 MCP 的客户端配置方式类似${NC}\n"
   printf "\n"
-  printf "获取 Wiki Cookie 的方法:\n"
-  printf "  1. 在浏览器中打开 https://wiki.p1.cn 并登录\n"
-  printf "  2. 打开开发者工具 (F12) → 网络 (Network) 标签\n"
-  printf "  3. 刷新页面，点击任意请求\n"
-  printf "  4. 复制请求头中的 Cookie 值\n"
-  printf "  5. 详细步骤请参考 README 文档 \n"
+  printf "${BLUE}═══════════════════════════════════════════${NC}\n"
+  printf "${BLUE}  首次使用权限配置${NC}\n"
+  printf "${BLUE}═══════════════════════════════════════════${NC}\n"
+  printf "\n"
+  printf "${GREEN}Chromium 系浏览器 (Chrome、Edge、Arc、Brave 等):${NC}\n"
+  printf "  首次运行时，系统会弹出钥匙串访问提示\n"
+  printf "  请输入密码并选择「始终允许」以避免每次都弹出提示\n"
+  printf "\n"
+  printf "${GREEN}Safari 浏览器:${NC}\n"
+  printf "  需要在系统设置中开启「完全磁盘访问权限」\n"
+  printf "  1. 打开「系统设置」→「隐私与安全性」→「完全磁盘访问权限」\n"
+  printf "  2. 添加并启用 Cursor 或你使用的终端应用\n"
+  printf "\n"
+  printf "${YELLOW}确保浏览器已登录 wiki.p1.cn，Cookie 将自动从浏览器读取${NC}\n"
   printf "\n"
 else
   printf "${RED}错误: 安装失败，二进制文件不可执行。${NC}\n"
