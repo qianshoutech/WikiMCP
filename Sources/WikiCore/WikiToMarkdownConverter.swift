@@ -696,6 +696,22 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
             return try convertTableToHTML(element)
         }
         
+        // 检查是否有单元格合并（rowspan/colspan）- Markdown 不支持
+        let cells = try element.select("td, th")
+        var hasMergedCells = false
+        for cell in cells {
+            let rowspan = Int(try cell.attr("rowspan")) ?? 1
+            let colspan = Int(try cell.attr("colspan")) ?? 1
+            if rowspan > 1 || colspan > 1 {
+                hasMergedCells = true
+                break
+            }
+        }
+        
+        if hasMergedCells {
+            return try convertTableToHTML(element)
+        }
+        
         return try convertTableToMarkdown(element)
     }
     
@@ -778,26 +794,40 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         return directRows
     }
     
+    /// 将嵌套表格或带合并单元格的表格转换为 HTML 格式
     private func convertTableToHTML(_ element: Element) throws -> String {
         var result = "\n<table>\n"
         
         let directRows = try getDirectTableRows(element)
         
         for tr in directRows {
-            result += "\n<tr>\n"
+            result += "<tr>\n"
             
             for cell in tr.children() {
                 let tagName = cell.tagName().lowercased()
                 if tagName == "th" || tagName == "td" {
+                    // 保留 rowspan 和 colspan 属性
+                    var attrs: [String] = []
+                    let rowspan = try cell.attr("rowspan")
+                    let colspan = try cell.attr("colspan")
+                    
+                    if !rowspan.isEmpty, let rowspanInt = Int(rowspan), rowspanInt > 1 {
+                        attrs.append("rowspan=\"\(rowspan)\"")
+                    }
+                    if !colspan.isEmpty, let colspanInt = Int(colspan), colspanInt > 1 {
+                        attrs.append("colspan=\"\(colspan)\"")
+                    }
+                    
+                    let attrStr = attrs.isEmpty ? "" : " " + attrs.joined(separator: " ")
                     let cellContent = try convertTableCellToHTML(cell)
-                    result += "\n<\(tagName)>\n\n\(cellContent)\n\n</\(tagName)>\n"
+                    result += "<\(tagName)\(attrStr)>\n\n\(cellContent)\n\n</\(tagName)>\n"
                 }
             }
             
-            result += "\n</tr>\n"
+            result += "</tr>\n"
         }
         
-        result += "\n</table>\n\n"
+        result += "</table>\n\n"
         return result
     }
     
