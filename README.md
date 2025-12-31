@@ -144,22 +144,6 @@ skills/wiki-tool/wikicli convert "https://wiki.p1.cn/..." --browser edge
 
 ---
 
-## Cookie 配置（备用方式）
-
-如果自动读取浏览器 Cookie 不可用，可以使用环境变量方式：
-
-### 如何获取 Cookie
-
-1. 在浏览器中打开 https://wiki.p1.cn 并登录
-2. 打开开发者工具 (F12 或 Cmd+Option+I)
-3. 切换到 Network 标签
-4. 刷新页面，点击任意请求
-5. 在 Headers 中找到 `Cookie` 字段并复制完整内容
-
-![示例](get_cookie.jpg)
-
----
-
 
 ## 项目结构
 
