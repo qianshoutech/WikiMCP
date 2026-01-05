@@ -1,5 +1,5 @@
 {
-  "originHash" : "ecdd3bfe45f9ace7ab3addd5aabe8a2b47974b36f59336a33e36faba5ad07453",
+  "originHash" : "e1bac582bdee32f12e76337076fe4c61baba61901931cbd87806db065301142f",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/steipete/SweetCookieKit.git",
       "state" : {
-        "revision" : "271434042c0af81208fefb8c32faec737dc7b8ae",
-        "version" : "0.1.2"
+        "revision" : "29d23be1882e71539b84b7216c0ed13af9b33adb",
+        "version" : "0.2.0"
       }
     },
     {
