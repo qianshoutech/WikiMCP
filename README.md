@@ -61,6 +61,8 @@ curl -fsSL https://raw.githubusercontent.com/qianshoutech/WikiMCP/main/install.s
   }
 }
 ```
+⚠️如果一些客户端无法连接 MCP, 如 `ChatWise`, `Alma` 等, 可以将命令路径写为本机绝对路径, 如 
+`/Users/phoenix/.local/bin/wikimcp`
 
 **args 参数说明**：指定从哪个浏览器读取 Cookie，默认为 `chrome`。
 
