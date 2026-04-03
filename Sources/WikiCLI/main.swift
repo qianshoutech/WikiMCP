@@ -115,6 +115,9 @@ struct WikiCLI {
             if !result.downloadedImages.isEmpty {
                 print("**下载图片数量**: \(result.downloadedImages.count)\n")
             }
+            if !result.downloadedAttachments.isEmpty {
+                print("**下载附件数量**: \(result.downloadedAttachments.count)\n")
+            }
             print("---\n")
             print(result.markdown)
             

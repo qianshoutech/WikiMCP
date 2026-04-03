@@ -16,6 +16,7 @@ public struct WikiConversionResult: Sendable {
     public let outputDirectory: URL
     public let markdownFile: URL
     public let downloadedImages: [String: URL]  // 原始 URL -> 本地路径
+    public let downloadedAttachments: [String: URL]  // 原始 URL -> 本地路径
 }
 
 // MARK: - Wiki to Markdown Converter
@@ -36,6 +37,7 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
     private var currentPageTitle: String?
     private var currentOutputDir: URL?
     private var imagesToDownload: [(url: String, localName: String)] = []
+    private var attachmentsToDownload: [(url: String, localName: String)] = []
     
     public init(baseURL: String = "https://wiki.p1.cn") {
         self.baseURL = baseURL
@@ -83,6 +85,7 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
     private func convertAndSaveHTML(_ html: String) async throws -> WikiConversionResult {
         // 重置状态
         imagesToDownload = []
+        attachmentsToDownload = []
         
         let document = try SwiftSoup.parse(html)
         
@@ -100,7 +103,7 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         
         try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
         
-        // 转换为 Markdown（使用本地图片模式）
+        // 转换为 Markdown（使用本地图片/附件模式）
         let markdown = try convertHTMLWithLocalImages(document)
         
         // 下载所有图片
@@ -117,6 +120,20 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
             }
         }
         
+        // 下载所有附件
+        var downloadedAttachments: [String: URL] = [:]
+        for (attachmentURL, localName) in attachmentsToDownload {
+            do {
+                let fileData = try await WikiAPIClient.shared.downloadFile(from: attachmentURL)
+                let localPath = outputDir.appendingPathComponent(localName)
+                try fileData.write(to: localPath)
+                downloadedAttachments[attachmentURL] = localPath
+                FileHandle.standardError.write("✓ 下载附件: \(localName)\n".data(using: .utf8)!)
+            } catch {
+                FileHandle.standardError.write("✗ 下载附件失败: \(attachmentURL) - \(error.localizedDescription)\n".data(using: .utf8)!)
+            }
+        }
+        
         // 保存 Markdown 文件（文件名只用标题，不含 pageId）
         let safeFileName = makeSafeFileName(pageTitle)
         let markdownFile = outputDir.appendingPathComponent("\(safeFileName).md")
@@ -127,12 +144,14 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         currentPageTitle = nil
         currentOutputDir = nil
         imagesToDownload = []
+        attachmentsToDownload = []
         
         return WikiConversionResult(
             markdown: markdown,
             outputDirectory: outputDir,
             markdownFile: markdownFile,
-            downloadedImages: downloadedImages
+            downloadedImages: downloadedImages,
+            downloadedAttachments: downloadedAttachments
         )
     }
     
@@ -583,6 +602,69 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         }
     }
     
+    // MARK: - Attachment Helpers
+    
+    private static let attachmentPathPatterns = [
+        "/download/attachments/",
+        "/download/thumbnails/",
+        "/plugins/viewsource/",
+    ]
+    
+    private static let attachmentExtensions: Set<String> = [
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "zip", "rar", "7z", "gz", "tar",
+        "txt", "csv", "rtf", "odt", "ods", "odp",
+        "xml", "json", "yaml", "yml",
+        "mp3", "mp4", "wav", "avi", "mov",
+        "dmg", "iso", "apk", "ipa",
+    ]
+    
+    /// 判断 URL 是否是 Confluence 附件下载链接（非图片）
+    private func isAttachmentURL(_ href: String) -> Bool {
+        let lowerHref = href.lowercased()
+        
+        let matchesPattern = Self.attachmentPathPatterns.contains { lowerHref.contains($0) }
+        guard matchesPattern else { return false }
+        
+        let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif"]
+        if let url = URL(string: href) {
+            let ext = url.lastPathComponent
+                .components(separatedBy: ".")
+                .last?
+                .lowercased() ?? ""
+            if imageExtensions.contains(ext) {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    /// 从 URL 生成本地附件文件名
+    private func generateLocalAttachmentName(from urlString: String, pageId: String) -> String {
+        guard let url = URL(string: urlString) else {
+            return "\(pageId)_attachment"
+        }
+        
+        let pathComponents = url.path.split(separator: "/")
+        
+        if let attachmentsIndex = pathComponents.firstIndex(where: { $0 == "attachments" }),
+           attachmentsIndex + 2 < pathComponents.count {
+            let attachmentPageId = String(pathComponents[attachmentsIndex + 1])
+            let fileName = String(pathComponents[attachmentsIndex + 2])
+            
+            let decodedFileName = (fileName.removingPercentEncoding ?? fileName)
+                .replacingOccurrences(of: " ", with: "_")
+            return "\(attachmentPageId)_\(decodedFileName)"
+        }
+        
+        let lastComponent = url.lastPathComponent
+        let decodedName = (lastComponent.removingPercentEncoding ?? lastComponent)
+            .replacingOccurrences(of: " ", with: "_")
+        
+        return "\(pageId)_\(decodedName)"
+    }
+    
     // MARK: - Link Conversion
     
     private func convertLink(_ element: Element) throws -> String {
@@ -594,6 +676,15 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         }
         
         let linkText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 保存模式下，识别附件链接并替换为本地路径
+        if let pageId = currentPageId, currentOutputDir != nil, isAttachmentURL(href) {
+            let localName = generateLocalAttachmentName(from: href, pageId: pageId)
+            attachmentsToDownload.append((url: href, localName: localName))
+            let displayText = linkText.isEmpty ? localName : linkText
+            return "[\(displayText)](\(localName))"
+        }
+        
         if linkText.isEmpty {
             return href
         }
