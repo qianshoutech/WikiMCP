@@ -209,6 +209,13 @@ public final class WikiAPIClient: @unchecked Sendable {
     /// - Parameter url: 完整的图片 URL
     /// - Returns: 图片 Data
     public func downloadImage(from url: String) async throws -> Data {
+        try await downloadFile(from: url)
+    }
+    
+    /// 通过完整 URL 下载文件（图片、附件等）
+    /// - Parameter url: 完整的文件 URL
+    /// - Returns: 文件 Data
+    public func downloadFile(from url: String) async throws -> Data {
         return try await withCheckedThrowingContinuation { continuation in
             session.request(url, method: .get, headers: defaultHeaders)
                 .validate(statusCode: 200..<300)

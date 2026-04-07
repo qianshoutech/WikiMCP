@@ -158,6 +158,9 @@ struct WikiMCPServer {
             if !result.downloadedImages.isEmpty {
                 responseText += "**下载图片数量**: \(result.downloadedImages.count)\n\n"
             }
+            if !result.downloadedAttachments.isEmpty {
+                responseText += "**下载附件数量**: \(result.downloadedAttachments.count)\n\n"
+            }
             responseText += "---\n\n"
             responseText += result.markdown
             
