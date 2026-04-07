@@ -336,6 +336,14 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         // 图片
         case "img":
             return try convertImage(element)
+        
+        // 视频（将 source/src 解析为可下载链接）
+        case "video":
+            return try convertVideo(element)
+        
+        // 视频 source 节点由 video 统一处理，这里忽略避免输出噪音
+        case "source":
+            return ""
             
         // 链接
         case "a":
@@ -554,10 +562,7 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         }
         
         // 如果是相对路径，拼接 baseURL
-        var fullURL = src
-        if !src.isEmpty && !src.hasPrefix("http") {
-            fullURL = baseURL + src
-        }
+        let fullURL = resolveURL(src)
         
         let alt = try element.attr("alt")
         let title = try element.attr("data-linked-resource-default-alias")
@@ -566,11 +571,41 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         // 如果是保存模式，转换为本地路径
         if let pageId = currentPageId, currentOutputDir != nil {
             let localName = generateLocalImageName(from: fullURL, pageId: pageId)
-            imagesToDownload.append((url: fullURL, localName: localName))
+            enqueueImageDownload(url: fullURL, localName: localName)
             return "![\(altText)](\(localName))"
         }
         
         return "![\(altText)](\(fullURL))"
+    }
+    
+    // MARK: - Video Conversion
+    
+    private func convertVideo(_ element: Element) throws -> String {
+        // 优先解析 <source src="...">，其次使用 <video src="...">
+        var src = try element.select("source[src]").first()?.attr("src") ?? ""
+        if src.isEmpty {
+            src = try element.attr("src")
+        }
+        
+        guard !src.isEmpty else {
+            // 没有可用源地址时，忽略 video fallback 文案
+            return ""
+        }
+        
+        let fullURL = resolveURL(src)
+        
+        // 从 URL 推导显示名称
+        let originalName = URL(string: fullURL)?.lastPathComponent.removingPercentEncoding
+        let displayName = (originalName?.isEmpty == false ? originalName! : "video")
+        
+        // 保存模式下：按附件处理，确保视频会被下载
+        if let pageId = currentPageId, currentOutputDir != nil, isAttachmentURL(fullURL) {
+            let localName = generateLocalAttachmentName(from: fullURL, pageId: pageId)
+            enqueueAttachmentDownload(url: fullURL, localName: localName)
+            return "[\(displayName)](\(localName))\n\n"
+        }
+        
+        return "[\(displayName)](\(fullURL))\n\n"
     }
     
     /// 从 URL 生成本地图片文件名
@@ -665,6 +700,32 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         return "\(pageId)_\(decodedName)"
     }
     
+    // MARK: - URL/Queue Helpers
+    
+    private func resolveURL(_ rawURL: String) -> String {
+        guard !rawURL.isEmpty else { return rawURL }
+        if rawURL.hasPrefix("http") {
+            return rawURL
+        }
+        return baseURL + rawURL
+    }
+    
+    private func enqueueImageDownload(url: String, localName: String) {
+        guard !url.isEmpty else { return }
+        if imagesToDownload.contains(where: { $0.url == url || $0.localName == localName }) {
+            return
+        }
+        imagesToDownload.append((url: url, localName: localName))
+    }
+    
+    private func enqueueAttachmentDownload(url: String, localName: String) {
+        guard !url.isEmpty else { return }
+        if attachmentsToDownload.contains(where: { $0.url == url || $0.localName == localName }) {
+            return
+        }
+        attachmentsToDownload.append((url: url, localName: localName))
+    }
+    
     // MARK: - Link Conversion
     
     private func convertLink(_ element: Element) throws -> String {
@@ -680,7 +741,7 @@ public final class WikiToMarkdownConverter: @unchecked Sendable {
         // 保存模式下，识别附件链接并替换为本地路径
         if let pageId = currentPageId, currentOutputDir != nil, isAttachmentURL(href) {
             let localName = generateLocalAttachmentName(from: href, pageId: pageId)
-            attachmentsToDownload.append((url: href, localName: localName))
+            enqueueAttachmentDownload(url: href, localName: localName)
             let displayText = linkText.isEmpty ? localName : linkText
             return "[\(displayText)](\(localName))"
         }
