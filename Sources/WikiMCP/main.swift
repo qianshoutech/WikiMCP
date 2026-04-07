@@ -112,7 +112,7 @@ struct WikiMCPServer {
                 
             default:
                 return .init(
-                    content: [.text("未知工具: \(toolName)")],
+                    content: [.text(text: "未知工具: \(toolName)", annotations: nil, _meta: nil)],
                     isError: true
                 )
             }
@@ -146,7 +146,7 @@ struct WikiMCPServer {
             }
             else {
                 return .init(
-                    content: [.text("错误: 必须提供 url 或 pageId 参数")],
+                    content: [.text(text: "错误: 必须提供 url 或 pageId 参数", annotations: nil, _meta: nil)],
                     isError: true
                 )
             }
@@ -165,13 +165,13 @@ struct WikiMCPServer {
             responseText += result.markdown
             
             return .init(
-                content: [.text(responseText)],
+                content: [.text(text: responseText, annotations: nil, _meta: nil)],
                 isError: false
             )
             
         } catch {
             return .init(
-                content: [.text("转换失败: \(error.localizedDescription)")],
+                content: [.text(text: "转换失败: \(error.localizedDescription)", annotations: nil, _meta: nil)],
                 isError: true
             )
         }
@@ -181,7 +181,7 @@ struct WikiMCPServer {
     static func handleSearchWiki(arguments: [String: Value]) async -> CallTool.Result {
         guard let queryValue = arguments["query"], case .string(let query) = queryValue, !query.isEmpty else {
             return .init(
-                content: [.text("错误: 必须提供 query 参数")],
+                content: [.text(text: "错误: 必须提供 query 参数", annotations: nil, _meta: nil)],
                 isError: true
             )
         }
@@ -231,13 +231,13 @@ struct WikiMCPServer {
             }
             
             return .init(
-                content: [.text(resultText)],
+                content: [.text(text: resultText, annotations: nil, _meta: nil)],
                 isError: false
             )
             
         } catch {
             return .init(
-                content: [.text("搜索失败: \(error.localizedDescription)")],
+                content: [.text(text: "搜索失败: \(error.localizedDescription)", annotations: nil, _meta: nil)],
                 isError: true
             )
         }

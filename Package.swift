@@ -14,7 +14,7 @@ let package = Package(
         .library(name: "WikiCore", targets: ["WikiCore"])
     ],
     dependencies: [
-        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.10.0"),
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0"),
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.10.0"),
         .package(url: "https://github.com/steipete/SweetCookieKit.git", exact: "0.2.0"),
